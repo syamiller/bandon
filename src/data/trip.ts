@@ -39,7 +39,7 @@ export function pairLabel(pair: [PlayerId, PlayerId]): string {
 export const tripRace = {
   name: 'Trip points',
   description:
-    'No fixed sides for the week. Everyone banks their own points from match wins — and skins on every hole, every round. Net scoring: everyone plays off Simon (8); Zach, Emory, and Sammy get 3 strokes.',
+    'No fixed sides for the week. Match wins are the main currency; skins (unique best net only) count at ¼ weight. Everyone plays off Simon (8).',
   rules: [
     {
       title: 'Match wins',
@@ -49,7 +49,7 @@ export const tripRace = {
     {
       title: 'Skins',
       detail:
-        'Every round, net. Low net alone on a hole takes the skin; ties carry over.',
+        'Full courses only. Individual net — you need the unique best net on the hole (ties carry). Each skin is worth ¼ of a match point in the standings.',
     },
     {
       title: 'Handicaps',

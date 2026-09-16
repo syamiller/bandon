@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { schedule } from '../data/trip'
 import { scorecardsByRoundId } from '../data/scorecards'
-import { calculateRoundResult, calculateTripStandings } from '../points'
+import { calculateRoundResult, calculateTripStandings, SKIN_WEIGHT } from '../points'
 import {
   emptyScoresForCard,
   fetchScores,
@@ -119,7 +119,8 @@ export function LiveScoring() {
                 <span className="standings__rank">{i + 1}</span>
                 <span className="standings__name">{row.name}</span>
                 <span className="standings__breakdown">
-                  match {formatPoints(row.match)} · skins {formatPoints(row.skins)}
+                  match {formatPoints(row.match)} · skins {formatPoints(row.skins)}{' '}
+                  ({formatPoints(row.skinPoints)} pts)
                 </span>
                 <span className="standings__total">{formatPoints(row.total)}</span>
               </li>
@@ -165,8 +166,8 @@ export function LiveScoring() {
         {card.rating != null ? ` · ${card.rating}/${card.slope}` : ''}
       </p>
       <p className="scoring__hint">
-        Shared for everyone. Enter gross — match points and skins update from this round’s
-        format automatically.
+        Shared for everyone. Enter gross — nets use strokes off Simon. Skins need the
+        unique best net (no ties); each skin is worth {SKIN_WEIGHT} match points.
       </p>
 
       <div className="scoring__table-wrap">
@@ -271,9 +272,12 @@ export function LiveScoring() {
             </p>
             {schedule.find((r) => r.id === roundId)?.game.kind !== 'closest-to-pin' ? (
               <p>
-                Skins{' '}
+                Skins (net, no ties · {SKIN_WEIGHT} pts each){' '}
                 {ids
-                  .map((id) => `${playerName(id)} ${formatPoints(roundResult.skinPoints[id])}`)
+                  .map(
+                    (id) =>
+                      `${playerName(id)} ${formatPoints(roundResult.skinsWon[id])} (${formatPoints(roundResult.skinPoints[id])})`,
+                  )
                   .join(' · ')}
               </p>
             ) : (

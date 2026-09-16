@@ -20,7 +20,10 @@ export type PointEvent = {
   roundId: string
   label: string
   detail: string
+  /** Weighted points toward standings. */
   points: Partial<Record<PlayerId, number>>
+  /** Raw skin count awarded (match events omit this). */
+  skinsWon?: Partial<Record<PlayerId, number>>
 }
 
 export type RoundResult = {
@@ -29,6 +32,9 @@ export type RoundResult = {
   format: string
   events: PointEvent[]
   matchPoints: Record<PlayerId, number>
+  /** Raw skins won (unique net winners; carry pot size). */
+  skinsWon: Record<PlayerId, number>
+  /** Skins toward standings (= skinsWon × SKIN_WEIGHT). */
   skinPoints: Record<PlayerId, number>
   total: Record<PlayerId, number>
 }
@@ -36,10 +42,19 @@ export type RoundResult = {
 export type TripStandings = {
   byPlayer: Record<
     PlayerId,
-    { match: number; skins: number; total: number; name: string }
+    {
+      match: number
+      skins: number
+      skinPoints: number
+      total: number
+      name: string
+    }
   >
   rounds: RoundResult[]
 }
+
+/** One skin is worth this fraction of a match point in trip standings. */
+export const SKIN_WEIGHT = 0.25
 
 function zero(): Record<PlayerId, number> {
   return { simon: 0, zach: 0, emory: 0, sammy: 0 }
@@ -88,7 +103,12 @@ function awardSplit(
   return pts
 }
 
-/** Skins: unique low net wins; ties carry. Carry value stacks. */
+/**
+ * Skins — individual net only.
+ * - All four must have a score on the hole before it settles.
+ * - Unique lowest net wins the pot; any tie carries (no skin awarded).
+ * - Standings weight each skin at SKIN_WEIGHT (default ¼ match point).
+ */
 function calcSkins(
   round: Round,
   scores: Record<PlayerId, HoleScore[]>,
@@ -96,34 +116,44 @@ function calcSkins(
   const card = scorecardsByRoundId[round.id]
   if (!card) return []
   const events: PointEvent[] = []
-  let carry = 0
+  let pot = 0
   const ids = playerIds()
 
   card.holesDetail.forEach((hole, i) => {
-    const nets = ids
-      .map((id) => ({ id, net: netForHole(scores, hole, i, id) }))
-      .filter((x): x is { id: PlayerId; net: number } => x.net != null)
-    if (nets.length < 2) {
-      carry += 1
+    const nets = ids.map((id) => ({
+      id,
+      net: netForHole(scores, hole, i, id),
+    }))
+    // Wait until the whole group has a net on this hole.
+    if (nets.some((n) => n.net == null)) return
+
+    const settled = nets as { id: PlayerId; net: number }[]
+    const low = Math.min(...settled.map((n) => n.net))
+    const winners = settled.filter((n) => n.net === low).map((n) => n.id)
+    pot += 1
+
+    if (winners.length !== 1) {
+      // Tie — no skin; pot carries to the next hole.
       return
     }
-    const low = Math.min(...nets.map((n) => n.net))
-    const winners = nets.filter((n) => n.net === low).map((n) => n.id)
-    const value = carry + 1
-    if (winners.length === 1) {
-      events.push({
-        roundId: round.id,
-        label: `Skin · hole ${hole.number}`,
-        detail:
-          carry > 0
-            ? `${playerName(winners[0])} · ${value} pts (incl. carry)`
-            : `${playerName(winners[0])} · ${value} pt`,
-        points: { [winners[0]]: value },
-      })
-      carry = 0
-    } else {
-      carry = value
-    }
+
+    const won = pot
+    const weighted = won * SKIN_WEIGHT
+    const winner = winners[0]
+    const netsLabel = settled
+      .map((n) => `${playerName(n.id)} ${n.net}`)
+      .join(', ')
+    events.push({
+      roundId: round.id,
+      label: `Skin · hole ${hole.number}`,
+      detail:
+        won > 1
+          ? `${playerName(winner)} alone on net (${netsLabel}) · ${won} skins carried`
+          : `${playerName(winner)} alone on net (${netsLabel})`,
+      points: { [winner]: weighted },
+      skinsWon: { [winner]: won },
+    })
+    pot = 0
   })
 
   return events
@@ -362,9 +392,13 @@ export function calculateRoundResult(
   const skinEvents = round.game.kind === 'closest-to-pin' ? [] : calcSkins(round, scores)
 
   const matchPoints = zero()
+  const skinsWon = zero()
   const skinPoints = zero()
   for (const e of matchEvents) addPoints(matchPoints, e.points)
-  for (const e of skinEvents) addPoints(skinPoints, e.points)
+  for (const e of skinEvents) {
+    addPoints(skinPoints, e.points)
+    if (e.skinsWon) addPoints(skinsWon, e.skinsWon)
+  }
 
   const total = zero()
   addPoints(total, matchPoints)
@@ -376,6 +410,7 @@ export function calculateRoundResult(
     format: round.game.label,
     events: [...matchEvents, ...skinEvents],
     matchPoints,
+    skinsWon,
     skinPoints,
     total,
   }
@@ -386,14 +421,15 @@ export function calculateTripStandings(allScores: RoundScores): TripStandings {
   const byPlayer = Object.fromEntries(
     players.map((p) => [
       p.id,
-      { match: 0, skins: 0, total: 0, name: p.name },
+      { match: 0, skins: 0, skinPoints: 0, total: 0, name: p.name },
     ]),
   ) as TripStandings['byPlayer']
 
   for (const round of rounds) {
     for (const id of playerIds()) {
       byPlayer[id].match += round.matchPoints[id]
-      byPlayer[id].skins += round.skinPoints[id]
+      byPlayer[id].skins += round.skinsWon[id]
+      byPlayer[id].skinPoints += round.skinPoints[id]
       byPlayer[id].total += round.total[id]
     }
   }
