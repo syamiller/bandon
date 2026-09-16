@@ -1,5 +1,6 @@
 .page {
-  overflow-x: clip;
+  /* keep horizontal bleed clipped without breaking in-page anchors */
+  overflow-x: hidden;
 }
 
 /* —— Hero —— */
