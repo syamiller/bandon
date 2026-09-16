@@ -1,13 +1,46 @@
 # Bandon
 
-Trip hub for the **Nov 15–18, 2026** Bandon week: tee schedule, individual trip points (match wins + skins every round), and mixed per-round formats.
+Trip hub for the **Nov 15–18, 2026** Bandon week: tee schedule, shared live scoring, and automatic match / skins points.
 
-## Quick start
+## Quick start (local)
 
 ```bash
 npm install
-npm run dev
+npm run dev          # API :3001 + Vite :5173 (proxies /api)
 ```
+
+Local scores save to `data/scores.json` (gitignored). No Redis needed on your laptop.
+
+## Deploy on Vercel
+
+Vercel’s filesystem is ephemeral, so live scores need **Upstash Redis**.
+
+### 1. Push the repo and import in Vercel
+- [vercel.com/new](https://vercel.com/new) → import `syamiller/bandon`
+- Framework preset: **Other** (or leave blank) — `vercel.json` sets `dist` as output
+- Root directory: repo root
+- Build command: `npm run build` (already in `vercel.json`)
+
+### 2. Add Upstash Redis
+In the Vercel project:
+1. **Storage** → create / connect **Upstash Redis**  
+   (or create a DB at [console.upstash.com](https://console.upstash.com) and paste env vars)
+2. Ensure these env vars exist (Production + Preview):
+
+```
+UPSTASH_REDIS_REST_URL=...
+UPSTASH_REDIS_REST_TOKEN=...
+```
+
+See `.env.example`.
+
+### 3. Deploy
+Redeploy after env vars are set. The site is static Vite output; `/api/scores` runs as serverless functions and reads/writes Redis.
+
+### 4. Smoke test
+- Open the site → **Score** → status should show **Shared · live**
+- Enter a score on phone A, refresh phone B — same number
+- `GET /api/scores` should return `{ "scores": {...}, "storage": "upstash", ... }`
 
 ## Handicaps
 
@@ -18,19 +51,15 @@ npm run dev
 | Emory | 11 | +3 |
 | Sammy | 11 | +3 |
 
-## Live scoring (shared)
+## Scoring
 
-Scores live on a small API (`server/index.js`) so every device sees the same card.
+- **Match points** — from each round’s format (best ball, Nassau, sixes, Wolf, CTP)
+- **Skins** — unique best **net** only (ties carry); each skin = ¼ match point in standings
+- Points are computed in the browser from shared gross scores (not stored separately)
 
-```bash
-npm run dev          # API :3001 + Vite :5173 (proxied /api)
-npm run build && npm start   # production: API serves dist + /api
-```
+## Scorecards
 
-Match points and skins calculate automatically from each round’s format (best ball, Nassau, sixes, Wolf, CTP). Trip standings update as scores come in.
-
-
-Hole pars, men’s stroke indexes, and Green/Back yardages live in [`src/data/scorecards.ts`](src/data/scorecards.ts) (GolfPass / resort sources noted per course).
+Hole pars, stroke indexes, and yardages: [`src/data/scorecards.ts`](src/data/scorecards.ts).
 
 ## Round formats
 
@@ -43,5 +72,3 @@ Hole pars, men’s stroke indexes, and Green/Back yardages live in [`src/data/sc
 | Nov 17 am | Pacific Dunes | Best ball Nassau |
 | Nov 17 pm | Old McDonald | Wolf |
 | Nov 18 am | Sheep Ranch | Finale best ball match |
-
-Hero image is official Bandon Dunes photography (hole 12) from [bandondunesgolf.com](https://bandondunesgolf.com).
