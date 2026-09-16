@@ -1,4 +1,4 @@
-import { patchRound, readScores, storageMode, writeScores } from '../lib/scores-store.js'
+import { patchRound, readScores, storageMode, writeScores } from '../../lib/scores-store.js'
 
 function send(res, status, body) {
   res.statusCode = status
