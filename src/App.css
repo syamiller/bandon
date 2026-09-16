@@ -572,13 +572,6 @@
   font-size: 0.95rem;
 }
 
-@media (max-width: 560px) {
-  .game__order li {
-    grid-template-columns: 1fr;
-    gap: 0.2rem;
-  }
-}
-
 /* —— Footer —— */
 .footer {
   width: min(1120px, calc(100% - 2.5rem));
