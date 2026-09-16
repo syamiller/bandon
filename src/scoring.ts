@@ -10,7 +10,10 @@ export type HoleScore = number | null
 /** roundId → playerId → hole index (0-based) → gross strokes */
 export type RoundScores = Record<string, Record<PlayerId, HoleScore[]>>
 
-const STORAGE_KEY = 'bandon-live-scores-v1'
+export type ScoresStore = {
+  scores: RoundScores
+  updatedAt: string | null
+}
 
 export function emptyScoresForCard(card: Scorecard): Record<PlayerId, HoleScore[]> {
   const blank = () => Array.from({ length: card.holes }, () => null as HoleScore)
@@ -22,18 +25,36 @@ export function emptyScoresForCard(card: Scorecard): Record<PlayerId, HoleScore[
   }
 }
 
-export function loadScores(): RoundScores {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return {}
-    return JSON.parse(raw) as RoundScores
-  } catch {
-    return {}
+async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(path, {
+    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+    ...init,
+  })
+  if (!res.ok) {
+    throw new Error(`API ${res.status}: ${await res.text()}`)
   }
+  return res.json() as Promise<T>
 }
 
-export function saveScores(scores: RoundScores) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(scores))
+export function fetchScores(): Promise<ScoresStore> {
+  return api<ScoresStore>('/api/scores')
+}
+
+export function putScores(scores: RoundScores): Promise<ScoresStore> {
+  return api<ScoresStore>('/api/scores', {
+    method: 'PUT',
+    body: JSON.stringify({ scores }),
+  })
+}
+
+export function patchRoundScores(
+  roundId: string,
+  roundScores: Record<PlayerId, HoleScore[]>,
+): Promise<ScoresStore> {
+  return api<ScoresStore>(`/api/scores/${encodeURIComponent(roundId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ roundScores }),
+  })
 }
 
 /** True if this player gets a stroke on this hole (SI ≤ strokes received). */
@@ -87,4 +108,9 @@ export function cardForRound(roundId: string): Scorecard | undefined {
 
 export function playerIds(): PlayerId[] {
   return players.map((p) => p.id)
+}
+
+export function formatPoints(n: number): string {
+  if (Number.isInteger(n)) return String(n)
+  return n.toFixed(1)
 }

@@ -608,6 +608,147 @@
   border: 0;
 }
 
+.standings {
+  margin-bottom: 2rem;
+  padding: 1.25rem 1.25rem 1rem;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--dune) 7%, var(--foam));
+}
+
+.standings__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.standings__head h3 {
+  font-size: 1.35rem;
+  color: var(--dune-deep);
+}
+
+.scoring__sync {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.scoring__sync--live {
+  color: var(--dune);
+}
+
+.scoring__sync--error {
+  color: #8a3b2b;
+}
+
+.standings__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.standings__list li {
+  display: grid;
+  grid-template-columns: 1.5rem 1fr auto auto;
+  gap: 0.75rem;
+  align-items: baseline;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.standings__rank {
+  color: var(--sand-deep);
+  font-weight: 600;
+}
+
+.standings__name {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--dune-deep);
+}
+
+.standings__breakdown {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.standings__total {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--dune-deep);
+  min-width: 2rem;
+  text-align: right;
+}
+
+.round-points {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.round-points__head h3 {
+  font-size: 1.25rem;
+  color: var(--dune-deep);
+  margin-bottom: 0.35rem;
+}
+
+.round-points__head p {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin: 0.15rem 0;
+}
+
+.round-points__events {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.round-points__events li {
+  display: grid;
+  grid-template-columns: minmax(7rem, 12rem) 1fr auto;
+  gap: 0.65rem;
+  align-items: baseline;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+
+.round-points__label {
+  font-weight: 600;
+  color: var(--dune-deep);
+}
+
+.round-points__detail {
+  color: var(--muted);
+}
+
+.round-points__pts {
+  color: var(--sand-deep);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .standings__list li {
+    grid-template-columns: 1.5rem 1fr auto;
+  }
+
+  .standings__breakdown {
+    grid-column: 2 / -1;
+  }
+
+  .round-points__events li {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+}
+
 .scoring__controls {
   display: flex;
   flex-wrap: wrap;

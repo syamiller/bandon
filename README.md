@@ -18,9 +18,17 @@ npm run dev
 | Emory | 11 | +3 |
 | Sammy | 11 | +3 |
 
-Strokes fall on stroke-index 1–3 on each scorecard. Live scoring is under **Score** — scores save in the browser.
+## Live scoring (shared)
 
-## Scorecards
+Scores live on a small API (`server/index.js`) so every device sees the same card.
+
+```bash
+npm run dev          # API :3001 + Vite :5173 (proxied /api)
+npm run build && npm start   # production: API serves dist + /api
+```
+
+Match points and skins calculate automatically from each round’s format (best ball, Nassau, sixes, Wolf, CTP). Trip standings update as scores come in.
+
 
 Hole pars, men’s stroke indexes, and Green/Back yardages live in [`src/data/scorecards.ts`](src/data/scorecards.ts) (GolfPass / resort sources noted per course).
 

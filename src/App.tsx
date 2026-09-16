@@ -155,8 +155,8 @@ function App() {
             <p className="eyebrow">Live card</p>
             <h2>Scorekeeping</h2>
             <p className="section__lede">
-              Full scorecards for every course. Enter gross scores — net applies strokes
-              off Simon automatically. Saved on this device.
+              Full scorecards for every course. Scores sync for everyone — match points and
+              skins calculate from each round’s format. Playing off Simon.
             </p>
           </div>
           <LiveScoring />
