@@ -190,12 +190,22 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.5rem 1.75rem;
+  gap: 0.75rem 2rem;
   padding: 0;
   margin: 0.5rem 0 0;
   font-family: var(--font-display);
   font-size: clamp(1.35rem, 3vw, 1.75rem);
   color: var(--dune);
+}
+
+.players__hcp {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-top: 0.15rem;
 }
 
 /* —— Schedule —— */
@@ -583,6 +593,207 @@
 .footer__note code {
   font-size: 0.85em;
   color: var(--dune);
+}
+
+/* —— Live scoring —— */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.scoring__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+.scoring__field {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.scoring__field select {
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--dune-deep);
+  background: var(--foam);
+  border: 1px solid var(--line);
+  padding: 0.65rem 0.85rem;
+  min-width: 16rem;
+}
+
+.scoring__toggle {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.scoring__toggle button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.scoring__toggle button.is-active {
+  background: var(--dune);
+  color: var(--foam);
+}
+
+.scoring__clear {
+  margin-left: auto;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.scoring__clear:hover {
+  color: var(--dune-deep);
+  border-color: var(--dune);
+}
+
+.scoring__meta,
+.scoring__hint,
+.scoring__source {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin: 0 0 0.5rem;
+}
+
+.scoring__source {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}
+
+.scoring__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--foam) 88%, white);
+  -webkit-overflow-scrolling: touch;
+}
+
+.scoring__table {
+  border-collapse: collapse;
+  min-width: 720px;
+  width: max-content;
+  font-variant-numeric: tabular-nums;
+}
+
+.scoring__table th,
+.scoring__table td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.4rem 0.3rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--dune-deep);
+}
+
+.scoring__table thead th:first-child,
+.scoring__table tbody th,
+.scoring__table .scoring__par-row th,
+.scoring__table .scoring__si-row th,
+.scoring__table .scoring__yds-row th {
+  text-align: left;
+  padding-left: 0.75rem;
+  position: sticky;
+  left: 0;
+  background: color-mix(in srgb, var(--foam) 96%, var(--dune));
+  min-width: 5.5rem;
+  z-index: 1;
+}
+
+.scoring__par-row td,
+.scoring__si-row td,
+.scoring__yds-row td {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.scoring__player {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.scoring__strokes {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.scoring__input-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.scoring__input-wrap input {
+  width: 2.35rem;
+  text-align: center;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--dune-deep);
+  border: 1px solid var(--line);
+  background: var(--foam);
+  padding: 0.35rem 0.15rem;
+  border-radius: 0.2rem;
+}
+
+.scoring__input-wrap input:focus {
+  outline: 2px solid color-mix(in srgb, var(--dune) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.scoring__dot {
+  position: absolute;
+  top: -0.15rem;
+  right: -0.1rem;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--sand-deep);
+}
+
+.scoring__net-mini {
+  font-size: 0.68rem;
+  color: var(--muted);
+  line-height: 1;
+}
+
+.scoring__total {
+  font-weight: 600;
+}
+
+@media (min-width: 900px) {
+  .points-rules {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

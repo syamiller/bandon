@@ -2,18 +2,33 @@
  * Bandon Dunes · Nov 15–18, 2026
  * Simon, Zach, Emory, Sammy — individual points (match wins + skins). No fixed trip teams.
  * Skins run every round; round games below are the match format only.
+ *
+ * Handicaps: everyone plays off Simon (8). Zach/Emory/Sammy at 11 → 3 strokes each.
  */
 export const players = [
-  { id: 'simon', name: 'Simon' },
-  { id: 'zach', name: 'Zach' },
-  { id: 'emory', name: 'Emory' },
-  { id: 'sammy', name: 'Sammy' },
+  { id: 'simon', name: 'Simon', handicap: 8 },
+  { id: 'zach', name: 'Zach', handicap: 11 },
+  { id: 'emory', name: 'Emory', handicap: 11 },
+  { id: 'sammy', name: 'Sammy', handicap: 11 },
 ] as const
 
 export type PlayerId = (typeof players)[number]['id']
 
+/** Lowest handicap in the group — all others play off this player. */
+export const scratchPlayerId: PlayerId = 'simon'
+
 export function playerName(id: PlayerId): string {
   return players.find((p) => p.id === id)?.name ?? id
+}
+
+export function playerHandicap(id: PlayerId): number {
+  return players.find((p) => p.id === id)?.handicap ?? 0
+}
+
+/** Strokes received vs the group low (Simon). */
+export function strokesOffLow(id: PlayerId): number {
+  const low = playerHandicap(scratchPlayerId)
+  return Math.max(0, playerHandicap(id) - low)
 }
 
 export function pairLabel(pair: [PlayerId, PlayerId]): string {
@@ -24,17 +39,22 @@ export function pairLabel(pair: [PlayerId, PlayerId]): string {
 export const tripRace = {
   name: 'Trip points',
   description:
-    'No fixed sides for the week. Everyone banks their own points from match wins — and skins on every hole, every round.',
+    'No fixed sides for the week. Everyone banks their own points from match wins — and skins on every hole, every round. Net scoring: everyone plays off Simon (8); Zach, Emory, and Sammy get 3 strokes.',
   rules: [
     {
       title: 'Match wins',
       detail:
-        'Win a match, Nassau segment, Wolf hole-team, 6-hole 1v1, or closest-to-the-pin hole → points to you (split if you win as a partner).',
+        'Win a match, Nassau segment, Wolf hole-team, 6-hole 1v1, or closest-to-the-pin hole → points to you (split if you win as a partner). Net where applicable.',
     },
     {
       title: 'Skins',
       detail:
-        'Every round. Low score alone on a hole takes the skin; ties carry over.',
+        'Every round, net. Low net alone on a hole takes the skin; ties carry over.',
+    },
+    {
+      title: 'Handicaps',
+      detail:
+        'Simon 8 · Zach/Emory/Sammy 11. Playing off Simon → 0 / 3 / 3 / 3 strokes on the hardest holes (stroke index 1–3).',
     },
   ],
 }

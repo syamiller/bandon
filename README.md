@@ -9,16 +9,20 @@ npm install
 npm run dev
 ```
 
-## The four
+## Handicaps
 
-**Simon, Zach, Emory, Sammy** — edit in [`src/data/trip.ts`](src/data/trip.ts).
+| Player | Index | Strokes off Simon |
+|--------|-------|-------------------|
+| Simon | 8 | 0 (group low) |
+| Zach | 11 | +3 |
+| Emory | 11 | +3 |
+| Sammy | 11 | +3 |
 
-## How scoring works
+Strokes fall on stroke-index 1–3 on each scorecard. Live scoring is under **Score** — scores save in the browser.
 
-No fixed trip teams. Everyone banks their own points from:
+## Scorecards
 
-- **Match wins** — best ball, Nassau, Wolf, 6-hole 1v1s, closest-to-the-pin
-- **Skins** — every hole, every round (carryovers stack)
+Hole pars, men’s stroke indexes, and Green/Back yardages live in [`src/data/scorecards.ts`](src/data/scorecards.ts) (GolfPass / resort sources noted per course).
 
 ## Round formats
 

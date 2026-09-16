@@ -4,10 +4,12 @@ import {
   players,
   roundsByDay,
   schedule,
+  strokesOffLow,
   tripRace,
   type Round,
   type RoundGame,
 } from './data/trip'
+import { LiveScoring } from './components/LiveScoring'
 import './App.css'
 
 const HERO_IMAGE = '/bandon-dunes-hero.jpg'
@@ -30,20 +32,21 @@ function App() {
           <a href="#schedule">Schedule</a>
           <a href="#points">Points</a>
           <a href="#games">Games</a>
+          <a href="#scoring">Score</a>
         </nav>
         <div className="hero__copy">
           <p className="brand">Bandon</p>
           <h1>Seven rounds. Match wins and skins.</h1>
           <p className="hero__lede">
-            Nov 15–18, 2026 — Simon, Zach, Emory, and Sammy. Fresh format every tee time,
-            including the short tracks.
+            Nov 15–18, 2026 — Simon, Zach, Emory, and Sammy. Live scoring with handicaps —
+            everyone plays off Simon.
           </p>
           <div className="hero__ctas">
-            <a className="btn btn--solid" href="#schedule">
-              See the schedule
+            <a className="btn btn--solid" href="#scoring">
+              Live scoring
             </a>
-            <a className="btn btn--ghost" href="#games">
-              Round games
+            <a className="btn btn--ghost" href="#schedule">
+              Schedule
             </a>
           </div>
         </div>
@@ -51,10 +54,16 @@ function App() {
 
       <main>
         <section className="section section--players" aria-label="Players">
-          <p className="eyebrow">The four</p>
+          <p className="eyebrow">The four · playing off Simon</p>
           <ul className="players">
             {players.map((p) => (
-              <li key={p.id}>{p.name}</li>
+              <li key={p.id}>
+                {p.name}
+                <span className="players__hcp">
+                  {p.handicap}
+                  {strokesOffLow(p.id) > 0 ? ` · +${strokesOffLow(p.id)}` : ' · scratch'}
+                </span>
+              </li>
             ))}
           </ul>
         </section>
@@ -139,6 +148,18 @@ function App() {
               <RoundGameCard key={round.id} round={round} />
             ))}
           </div>
+        </section>
+
+        <section id="scoring" className="section">
+          <div className="section__head">
+            <p className="eyebrow">Live card</p>
+            <h2>Scorekeeping</h2>
+            <p className="section__lede">
+              Full scorecards for every course. Enter gross scores — net applies strokes
+              off Simon automatically. Saved on this device.
+            </p>
+          </div>
+          <LiveScoring />
         </section>
       </main>
 
