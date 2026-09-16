@@ -481,12 +481,6 @@
   margin: 0;
 }
 
-.game__rule {
-  margin-top: 1rem;
-  font-size: 0.9rem;
-  color: var(--muted);
-}
-
 .game__field {
   list-style: none;
   margin: 0;
