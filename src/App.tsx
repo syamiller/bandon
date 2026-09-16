@@ -10,8 +10,7 @@ import {
 } from './data/trip'
 import './App.css'
 
-const HERO_IMAGE =
-  'https://images.unsplash.com/photo-1735944242474-996f75ee6192?auto=format&fit=crop&w=2400&q=80'
+const HERO_IMAGE = '/bandon-dunes-hero.jpg'
 
 function App() {
   const days = roundsByDay()
@@ -20,7 +19,11 @@ function App() {
     <div className="page">
       <header className="hero">
         <div className="hero__media" aria-hidden="true">
-          <img src={HERO_IMAGE} alt="" className="hero__img" />
+          <img
+            src={HERO_IMAGE}
+            alt="Bandon Dunes Golf Resort — coastal links along the Pacific"
+            className="hero__img"
+          />
           <div className="hero__scrim" />
         </div>
         <nav className="nav">
@@ -127,8 +130,8 @@ function App() {
             <p className="eyebrow">Every tee time</p>
             <h2>Round games</h2>
             <p className="section__lede">
-              Best ball, Wolf, skins, and 6-hole 1v1s — partners and formats change so the
-              week stays uneven.
+              Best ball, Wolf, closest-to-the-pin, and 6-hole 1v1s — skins are always on
+              top, every round.
             </p>
           </div>
           <div className="games">
@@ -166,7 +169,6 @@ function RoundGameCard({ round }: { round: Round }) {
       </header>
       <p className="game__blurb">{game.blurb}</p>
       <GameDetail game={game} />
-      <p className="game__rule">{game.pointsNote}</p>
     </article>
   )
 }
@@ -188,7 +190,7 @@ function GameDetail({ game }: { game: RoundGame }) {
     )
   }
 
-  if (game.kind === 'skins') {
+  if (game.kind === 'closest-to-pin') {
     return (
       <ul className="game__field">
         {game.field.map((id) => (
@@ -214,7 +216,6 @@ function GameDetail({ game }: { game: RoundGame }) {
     )
   }
 
-  // Group sixes matches by holes block for clearer reading
   const blocks = ['1–6', '7–12', '13–18'] as const
   return (
     <div className="game__sixes">

@@ -1,6 +1,7 @@
 /**
  * Bandon Dunes · Nov 15–18, 2026
  * Simon, Zach, Emory, Sammy — individual points (match wins + skins). No fixed trip teams.
+ * Skins run every round; round games below are the match format only.
  */
 export const players = [
   { id: 'simon', name: 'Simon' },
@@ -19,33 +20,32 @@ export function pairLabel(pair: [PlayerId, PlayerId]): string {
   return `${playerName(pair[0])} & ${playerName(pair[1])}`
 }
 
-/** Individual trip race — no overall teams. */
+/** Individual trip race — no overall teams. Skins are every round. */
 export const tripRace = {
   name: 'Trip points',
   description:
-    'No fixed sides for the week. Everyone banks their own points from match wins and skins across all seven rounds.',
+    'No fixed sides for the week. Everyone banks their own points from match wins — and skins on every hole, every round.',
   rules: [
     {
       title: 'Match wins',
       detail:
-        'Win a match, Nassau segment, Wolf hole-team, or 6-hole 1v1 → points to you (split if you win as a partner).',
+        'Win a match, Nassau segment, Wolf hole-team, 6-hole 1v1, or closest-to-the-pin hole → points to you (split if you win as a partner).',
     },
     {
       title: 'Skins',
       detail:
-        'Low score alone on a hole takes the skin. Carryovers stack. Short courses (Preserve, Shorty’s) are built for this.',
+        'Every round. Low score alone on a hole takes the skin; ties carry over.',
     },
   ],
 }
 
 export type RoundFormatId =
   | 'best-ball-match'
-  | 'skins'
+  | 'closest-to-pin'
   | 'wolf'
   | 'sixes-1v1'
   | 'best-ball-nassau'
-  | 'best-ball-sixes'
-  | 'finale-skins-match'
+  | 'finale-best-ball'
 
 type BestBallGame = {
   kind: 'best-ball'
@@ -54,17 +54,14 @@ type BestBallGame = {
   blurb: string
   teamA: [PlayerId, PlayerId]
   teamB: [PlayerId, PlayerId]
-  /** Extra trip scoring note (e.g. skins on the side). */
-  pointsNote: string
 }
 
-type SkinsGame = {
-  kind: 'skins'
+type ClosestToPinGame = {
+  kind: 'closest-to-pin'
   formatId: RoundFormatId
   label: string
   blurb: string
   field: PlayerId[]
-  pointsNote: string
 }
 
 type WolfGame = {
@@ -74,7 +71,6 @@ type WolfGame = {
   blurb: string
   /** Tee order — rotates as Wolf each hole. */
   order: PlayerId[]
-  pointsNote: string
 }
 
 type SixesGame = {
@@ -83,10 +79,9 @@ type SixesGame = {
   label: string
   blurb: string
   matches: { holes: string; a: PlayerId; b: PlayerId }[]
-  pointsNote: string
 }
 
-export type RoundGame = BestBallGame | SkinsGame | WolfGame | SixesGame
+export type RoundGame = BestBallGame | ClosestToPinGame | WolfGame | SixesGame
 
 export type Round = {
   id: string
@@ -116,7 +111,6 @@ export const schedule: Round[] = [
       blurb: '2v2 best ball, hole by hole. Open the trip with partners.',
       teamA: ['simon', 'zach'],
       teamB: ['emory', 'sammy'],
-      pointsNote: 'Match win → points to the pair. Plus skins on every hole.',
     },
   },
   {
@@ -128,13 +122,12 @@ export const schedule: Round[] = [
     teeTime: '3:15 pm',
     shortCourse: true,
     game: {
-      kind: 'skins',
-      formatId: 'skins',
-      label: 'Skins',
+      kind: 'closest-to-pin',
+      formatId: 'closest-to-pin',
+      label: 'Closest to the Pin',
       blurb:
-        'Short course — all four play their own ball. Lowest score alone wins the skin; ties carry over.',
+        'Short course — every hole is a closest-to-the-pin. Closest ball on the green takes the hole.',
       field: ['simon', 'zach', 'emory', 'sammy'],
-      pointsNote: 'Each skin → points to that player. Carryovers make late holes matter.',
     },
   },
   {
@@ -146,13 +139,12 @@ export const schedule: Round[] = [
     teeTime: '8:30 am',
     shortCourse: true,
     game: {
-      kind: 'wolf',
-      formatId: 'wolf',
-      label: 'Wolf',
+      kind: 'closest-to-pin',
+      formatId: 'closest-to-pin',
+      label: 'Closest to the Pin',
       blurb:
-        'Short course Wolf. Tee order below — that player is Wolf; they go alone or pick a partner after seeing tee shots. Win the hole as Wolf or as a team.',
-      order: ['simon', 'zach', 'emory', 'sammy'],
-      pointsNote: 'Hole win → points to Wolf (alone) or split with the partner.',
+        'Short course — closest to the hole on every hole. Miss the green and you’re out for that hole.',
+      field: ['simon', 'zach', 'emory', 'sammy'],
     },
   },
   {
@@ -177,7 +169,6 @@ export const schedule: Round[] = [
         { holes: '13–18', a: 'simon', b: 'sammy' },
         { holes: '13–18', a: 'zach', b: 'emory' },
       ],
-      pointsNote: 'Each 6-hole match win → points. Ties split. Skins still count all 18.',
     },
   },
   {
@@ -195,7 +186,6 @@ export const schedule: Round[] = [
       blurb: 'New partners. Front nine, back nine, and overall — three matches in one.',
       teamA: ['simon', 'emory'],
       teamB: ['zach', 'sammy'],
-      pointsNote: 'Each Nassau segment win → points to that pair. Plus skins.',
     },
   },
   {
@@ -211,9 +201,8 @@ export const schedule: Round[] = [
       formatId: 'wolf',
       label: 'Wolf',
       blurb:
-        'Full-course Wolf with a shuffled tee order. Blind Wolf doubles the hole if you call it before anyone tees.',
+        'Full-course Wolf. Tee order below — that player is Wolf; they go alone or pick a partner after seeing tee shots. Blind Wolf doubles if you call it before anyone tees.',
       order: ['sammy', 'emory', 'zach', 'simon'],
-      pointsNote: 'Hole wins → trip points. Blind Wolf success is worth double.',
     },
   },
   {
@@ -226,13 +215,11 @@ export const schedule: Round[] = [
     shortCourse: false,
     game: {
       kind: 'best-ball',
-      formatId: 'finale-skins-match',
-      label: 'Finale · Best Ball + Skins',
-      blurb:
-        'Last pairing of the trip. 18-hole best-ball match, and skins are doubled on the back nine.',
+      formatId: 'finale-best-ball',
+      label: 'Finale · Best Ball Match',
+      blurb: 'Last pairing of the trip. Straight 18-hole best-ball match.',
       teamA: ['simon', 'sammy'],
       teamB: ['zach', 'emory'],
-      pointsNote: 'Match win → points to the pair. Double skins on 10–18.',
     },
   },
 ]
