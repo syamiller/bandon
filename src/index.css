@@ -1,19 +1,19 @@
 :root {
-  --sand: #d4c4a8;
-  --sand-deep: #b39a72;
-  --fog: #e6eef2;
-  --sky: #8ba8b8;
-  --dune: #2c4a3e;
-  --dune-deep: #1a3a2f;
-  --foam: #f7faf8;
-  --ink: #14241c;
-  --muted: #5a6f66;
-  --line: color-mix(in srgb, var(--dune) 18%, transparent);
+  --sand: #9eb6a8;
+  --sand-deep: #6d8f7c;
+  --fog: #dce7ec;
+  --sky: #7a9aab;
+  --dune: #23483c;
+  --dune-deep: #123028;
+  --foam: #f2f6f7;
+  --ink: #10241c;
+  --muted: #4d6460;
+  --line: color-mix(in srgb, var(--dune) 16%, transparent);
   --hero-overlay: linear-gradient(
-    160deg,
-    rgba(20, 36, 28, 0.55) 0%,
-    rgba(26, 58, 47, 0.35) 45%,
-    rgba(20, 36, 28, 0.72) 100%
+    165deg,
+    rgba(12, 32, 40, 0.58) 0%,
+    rgba(18, 48, 40, 0.28) 48%,
+    rgba(12, 28, 34, 0.78) 100%
   );
   --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'Outfit', system-ui, sans-serif;
@@ -33,15 +33,16 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 1.25rem;
 }
 
 body {
   margin: 0;
   min-width: 320px;
   background:
-    radial-gradient(ellipse 120% 80% at 10% -10%, #c5d5dc 0%, transparent 55%),
-    radial-gradient(ellipse 90% 60% at 100% 20%, #d8cbb0 0%, transparent 50%),
-    linear-gradient(180deg, #eef3f1 0%, var(--foam) 40%, #e8ebe4 100%);
+    radial-gradient(ellipse 110% 70% at 0% 0%, #c5d8e0 0%, transparent 55%),
+    radial-gradient(ellipse 80% 50% at 100% 10%, #b7cfc4 0%, transparent 45%),
+    linear-gradient(180deg, #e4eef1 0%, var(--foam) 42%, #e2ebe8 100%);
   background-attachment: fixed;
 }
 

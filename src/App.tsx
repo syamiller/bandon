@@ -11,7 +11,7 @@ import {
 import './App.css'
 
 const HERO_IMAGE =
-  'https://images.unsplash.com/photo-1535131749006-b7f58c99034b?auto=format&fit=crop&w=2400&q=80'
+  'https://images.unsplash.com/photo-1735944242474-996f75ee6192?auto=format&fit=crop&w=2400&q=80'
 
 function App() {
   const days = roundsByDay()
@@ -96,17 +96,23 @@ function App() {
             <p className="section__lede">{cup.description}</p>
           </div>
           <div className="cup-board">
-            {cup.teams.map((team) => (
-              <div key={team.id} className="cup-team">
-                <h3>{team.name}</h3>
-                <p>
-                  {playerName(team.players[0])} & {playerName(team.players[1])}
-                </p>
-              </div>
-            ))}
+            <div className="cup-team">
+              <h3>{cup.teams[0].name}</h3>
+              <p>
+                {playerName(cup.teams[0].players[0])} &{' '}
+                {playerName(cup.teams[0].players[1])}
+              </p>
+            </div>
             <p className="cup-vs" aria-hidden="true">
               vs
             </p>
+            <div className="cup-team">
+              <h3>{cup.teams[1].name}</h3>
+              <p>
+                {playerName(cup.teams[1].players[0])} &{' '}
+                {playerName(cup.teams[1].players[1])}
+              </p>
+            </div>
           </div>
           <p className="cup-scoring">{cup.scoring}</p>
           <ol className="cup-rounds">

@@ -121,7 +121,7 @@
 }
 
 .btn--solid {
-  background: var(--sand);
+  background: color-mix(in srgb, var(--foam) 92%, var(--sand));
   color: var(--dune-deep);
 }
 
