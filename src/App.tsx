@@ -1,12 +1,12 @@
 import {
-  cup,
-  formatDetails,
   pairLabel,
   playerName,
   players,
   roundsByDay,
   schedule,
+  tripRace,
   type Round,
+  type RoundGame,
 } from './data/trip'
 import './App.css'
 
@@ -25,15 +25,15 @@ function App() {
         </div>
         <nav className="nav">
           <a href="#schedule">Schedule</a>
-          <a href="#cup">The Cup</a>
+          <a href="#points">Points</a>
           <a href="#games">Games</a>
         </nav>
         <div className="hero__copy">
           <p className="brand">Bandon</p>
-          <h1>Seven rounds. One coast. Best ball all week.</h1>
+          <h1>Seven rounds. Match wins and skins.</h1>
           <p className="hero__lede">
-            Nov 15–18, 2026 — Trails through Sheep Ranch, with a running Cup and a fresh
-            format every tee time.
+            Nov 15–18, 2026 — Simon, Zach, Emory, and Sammy. Fresh format every tee time,
+            including the short tracks.
           </p>
           <div className="hero__ctas">
             <a className="btn btn--solid" href="#schedule">
@@ -61,7 +61,7 @@ function App() {
             <p className="eyebrow">Tee sheet</p>
             <h2>Full schedule</h2>
             <p className="section__lede">
-              Four days, seven courses — every round locked for best ball.
+              Four days, seven tee times — Preserve and Shorty’s are the short courses.
             </p>
           </div>
           <div className="days">
@@ -76,10 +76,13 @@ function App() {
                     <li key={round.id}>
                       <a href={`#game-${round.id}`} className="tee">
                         <time>{round.teeTime}</time>
-                        <span className="tee__course">{round.course}</span>
-                        <span className="tee__format">
-                          {formatDetails[round.sideGame.format].label}
+                        <span className="tee__course">
+                          {round.course}
+                          {round.shortCourse ? (
+                            <span className="tee__tag">Short</span>
+                          ) : null}
                         </span>
+                        <span className="tee__format">{round.game.label}</span>
                       </a>
                     </li>
                   ))}
@@ -89,39 +92,30 @@ function App() {
           </div>
         </section>
 
-        <section id="cup" className="section section--cup">
+        <section id="points" className="section section--cup">
           <div className="section__head">
             <p className="eyebrow">Across the trip</p>
-            <h2>{cup.name}</h2>
-            <p className="section__lede">{cup.description}</p>
+            <h2>{tripRace.name}</h2>
+            <p className="section__lede">{tripRace.description}</p>
           </div>
-          <div className="cup-board">
-            <div className="cup-team">
-              <h3>{cup.teams[0].name}</h3>
-              <p>
-                {playerName(cup.teams[0].players[0])} &{' '}
-                {playerName(cup.teams[0].players[1])}
-              </p>
-            </div>
-            <p className="cup-vs" aria-hidden="true">
-              vs
-            </p>
-            <div className="cup-team">
-              <h3>{cup.teams[1].name}</h3>
-              <p>
-                {playerName(cup.teams[1].players[0])} &{' '}
-                {playerName(cup.teams[1].players[1])}
-              </p>
-            </div>
+          <div className="points-rules">
+            {tripRace.rules.map((rule) => (
+              <div key={rule.title} className="points-rule">
+                <h3>{rule.title}</h3>
+                <p>{rule.detail}</p>
+              </div>
+            ))}
           </div>
-          <p className="cup-scoring">{cup.scoring}</p>
           <ol className="cup-rounds">
             {schedule.map((round, i) => (
               <li key={round.id}>
                 <span className="cup-rounds__n">{i + 1}</span>
-                <span className="cup-rounds__course">{round.course}</span>
+                <span className="cup-rounds__course">
+                  {round.course}
+                  {round.shortCourse ? <span className="tee__tag">Short</span> : null}
+                </span>
                 <span className="cup-rounds__meta">
-                  {round.dateLabel} · {formatDetails[round.sideGame.format].label}
+                  {round.dateLabel} · {round.game.label}
                 </span>
               </li>
             ))}
@@ -133,13 +127,13 @@ function App() {
             <p className="eyebrow">Every tee time</p>
             <h2>Round games</h2>
             <p className="section__lede">
-              Always best ball. Partners and formats rotate so nobody plays the same game
-              twice.
+              Best ball, Wolf, skins, and 6-hole 1v1s — partners and formats change so the
+              week stays uneven.
             </p>
           </div>
           <div className="games">
             {schedule.map((round) => (
-              <RoundGame key={round.id} round={round} />
+              <RoundGameCard key={round.id} round={round} />
             ))}
           </div>
         </section>
@@ -148,16 +142,15 @@ function App() {
       <footer className="footer">
         <p>Bandon Dunes Golf Resort · November 2026</p>
         <p className="footer__note">
-          Edit names and pairings in <code>src/data/trip.ts</code>
+          Edit formats and pairings in <code>src/data/trip.ts</code>
         </p>
       </footer>
     </div>
   )
 }
 
-function RoundGame({ round }: { round: Round }) {
-  const format = formatDetails[round.sideGame.format]
-  const { teamA, teamB } = round.sideGame
+function RoundGameCard({ round }: { round: Round }) {
+  const { game } = round
 
   return (
     <article id={`game-${round.id}`} className="game">
@@ -165,25 +158,84 @@ function RoundGame({ round }: { round: Round }) {
         <div>
           <p className="game__when">
             {round.weekday}, {round.dateLabel} · {round.teeTime}
+            {round.shortCourse ? ' · Short course' : ''}
           </p>
           <h3>{round.course}</h3>
         </div>
-        <p className="game__badge">{format.label}</p>
+        <p className="game__badge">{game.label}</p>
       </header>
-      <p className="game__blurb">{format.blurb}</p>
+      <p className="game__blurb">{game.blurb}</p>
+      <GameDetail game={game} />
+      <p className="game__rule">{game.pointsNote}</p>
+    </article>
+  )
+}
+
+function GameDetail({ game }: { game: RoundGame }) {
+  if (game.kind === 'best-ball') {
+    return (
       <div className="game__match">
         <div className="game__side">
           <p className="game__side-label">Side A</p>
-          <p className="game__pair">{pairLabel(teamA)}</p>
+          <p className="game__pair">{pairLabel(game.teamA)}</p>
         </div>
         <p className="game__vs">vs</p>
         <div className="game__side">
           <p className="game__side-label">Side B</p>
-          <p className="game__pair">{pairLabel(teamB)}</p>
+          <p className="game__pair">{pairLabel(game.teamB)}</p>
         </div>
       </div>
-      <p className="game__rule">Best ball · both scores count toward The Bandon Cup sides</p>
-    </article>
+    )
+  }
+
+  if (game.kind === 'skins') {
+    return (
+      <ul className="game__field">
+        {game.field.map((id) => (
+          <li key={id}>{playerName(id)}</li>
+        ))}
+      </ul>
+    )
+  }
+
+  if (game.kind === 'wolf') {
+    return (
+      <div className="game__wolf">
+        <p className="game__side-label">Starting tee order (rotates as Wolf)</p>
+        <ol className="game__order">
+          {game.order.map((id, i) => (
+            <li key={id}>
+              <span className="game__order-n">{i + 1}</span>
+              <span className="game__pair">{playerName(id)}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    )
+  }
+
+  // Group sixes matches by holes block for clearer reading
+  const blocks = ['1–6', '7–12', '13–18'] as const
+  return (
+    <div className="game__sixes">
+      {blocks.map((holes) => {
+        const matches = game.matches.filter((m) => m.holes === holes)
+        return (
+          <div key={holes} className="game__sixes-block">
+            <p className="game__side-label">Holes {holes}</p>
+            <ul>
+              {matches.map((m) => (
+                <li key={`${holes}-${m.a}-${m.b}`}>
+                  <span className="game__pair">{playerName(m.a)}</span>
+                  <span className="game__vs-inline">vs</span>
+                  <span className="game__pair">{playerName(m.b)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 

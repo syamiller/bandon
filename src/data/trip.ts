@@ -1,12 +1,12 @@
 /**
  * Bandon Dunes · Nov 15–18, 2026
- * Update player names here — everything else derives from these ids.
+ * Simon, Zach, Emory, Sammy — individual points (match wins + skins). No fixed trip teams.
  */
 export const players = [
   { id: 'simon', name: 'Simon' },
-  { id: 'matt', name: 'Matt' },
-  { id: 'ryan', name: 'Ryan' },
-  { id: 'dan', name: 'Dan' },
+  { id: 'zach', name: 'Zach' },
+  { id: 'emory', name: 'Emory' },
+  { id: 'sammy', name: 'Sammy' },
 ] as const
 
 export type PlayerId = (typeof players)[number]['id']
@@ -15,70 +15,78 @@ export function playerName(id: PlayerId): string {
   return players.find((p) => p.id === id)?.name ?? id
 }
 
-/** Fixed sides for the week-long Bandon Cup (best ball of these two, every round). */
-export const cup = {
-  name: 'The Bandon Cup',
+export function pairLabel(pair: [PlayerId, PlayerId]): string {
+  return `${playerName(pair[0])} & ${playerName(pair[1])}`
+}
+
+/** Individual trip race — no overall teams. */
+export const tripRace = {
+  name: 'Trip points',
   description:
-    'Running best-ball match across all seven rounds. Cup sides stay fixed; each round also has its own best-ball game with rotating partners and a different format.',
-  teams: [
+    'No fixed sides for the week. Everyone banks their own points from match wins and skins across all seven rounds.',
+  rules: [
     {
-      id: 'dunes',
-      name: 'Team Dunes',
-      players: ['simon', 'matt'] as [PlayerId, PlayerId],
+      title: 'Match wins',
+      detail:
+        'Win a match, Nassau segment, Wolf hole-team, or 6-hole 1v1 → points to you (split if you win as a partner).',
     },
     {
-      id: 'pacific',
-      name: 'Team Pacific',
-      players: ['ryan', 'dan'] as [PlayerId, PlayerId],
+      title: 'Skins',
+      detail:
+        'Low score alone on a hole takes the skin. Carryovers stack. Short courses (Preserve, Shorty’s) are built for this.',
     },
   ],
-  /** How each round feeds the Cup scoreboard. */
-  scoring:
-    'Each round is worth 1 Cup point (½ each if tied). Cup best-ball is always Simon/Matt vs Ryan/Dan from that round’s scores — even when the day’s side game uses different partners.',
 }
 
-export type RoundFormat =
-  | 'match-play'
-  | 'nassau'
-  | 'sixes'
-  | 'medal'
-  | 'stableford'
-  | 'match-presses'
-  | 'finale-nassau'
+export type RoundFormatId =
+  | 'best-ball-match'
+  | 'skins'
+  | 'wolf'
+  | 'sixes-1v1'
+  | 'best-ball-nassau'
+  | 'best-ball-sixes'
+  | 'finale-skins-match'
 
-export const formatDetails: Record<
-  RoundFormat,
-  { label: string; blurb: string }
-> = {
-  'match-play': {
-    label: 'Match Play',
-    blurb: 'Best ball vs best ball, hole by hole. Win the hole, win the point.',
-  },
-  nassau: {
-    label: 'Nassau',
-    blurb: 'Three best-ball matches in one: front nine, back nine, and overall 18.',
-  },
-  sixes: {
-    label: 'Sixes',
-    blurb: 'Three separate best-ball matches — holes 1–6, 7–12, and 13–18.',
-  },
-  medal: {
-    label: 'Medal',
-    blurb: 'Straight stroke play. Lowest best-ball total for 18 wins the round.',
-  },
-  stableford: {
-    label: 'Stableford',
-    blurb: 'Best-ball Stableford points vs par. Most points after 18 wins.',
-  },
-  'match-presses': {
-    label: 'Match + Presses',
-    blurb: '18-hole best-ball match. Automatic 2-down press starts a new match from that hole.',
-  },
-  'finale-nassau': {
-    label: 'Finale Nassau',
-    blurb: 'Front, back, and overall — double stakes on the overall. Cup clincher energy.',
-  },
+type BestBallGame = {
+  kind: 'best-ball'
+  formatId: RoundFormatId
+  label: string
+  blurb: string
+  teamA: [PlayerId, PlayerId]
+  teamB: [PlayerId, PlayerId]
+  /** Extra trip scoring note (e.g. skins on the side). */
+  pointsNote: string
 }
+
+type SkinsGame = {
+  kind: 'skins'
+  formatId: RoundFormatId
+  label: string
+  blurb: string
+  field: PlayerId[]
+  pointsNote: string
+}
+
+type WolfGame = {
+  kind: 'wolf'
+  formatId: RoundFormatId
+  label: string
+  blurb: string
+  /** Tee order — rotates as Wolf each hole. */
+  order: PlayerId[]
+  pointsNote: string
+}
+
+type SixesGame = {
+  kind: 'sixes-1v1'
+  formatId: RoundFormatId
+  label: string
+  blurb: string
+  matches: { holes: string; a: PlayerId; b: PlayerId }[]
+  pointsNote: string
+}
+
+export type RoundGame = BestBallGame | SkinsGame | WolfGame | SixesGame
 
 export type Round = {
   id: string
@@ -87,12 +95,9 @@ export type Round = {
   weekday: string
   course: string
   teeTime: string
-  /** Day-game partners (always best ball). Rotates across the trip. */
-  sideGame: {
-    format: RoundFormat
-    teamA: [PlayerId, PlayerId]
-    teamB: [PlayerId, PlayerId]
-  }
+  /** Preserve + Shorty’s are the resort’s short / par-3 tracks. */
+  shortCourse: boolean
+  game: RoundGame
 }
 
 export const schedule: Round[] = [
@@ -103,10 +108,15 @@ export const schedule: Round[] = [
     weekday: 'Sunday',
     course: 'Bandon Trails',
     teeTime: '9:50 am',
-    sideGame: {
-      format: 'match-play',
-      teamA: ['simon', 'matt'],
-      teamB: ['ryan', 'dan'],
+    shortCourse: false,
+    game: {
+      kind: 'best-ball',
+      formatId: 'best-ball-match',
+      label: 'Best Ball Match',
+      blurb: '2v2 best ball, hole by hole. Open the trip with partners.',
+      teamA: ['simon', 'zach'],
+      teamB: ['emory', 'sammy'],
+      pointsNote: 'Match win → points to the pair. Plus skins on every hole.',
     },
   },
   {
@@ -116,10 +126,15 @@ export const schedule: Round[] = [
     weekday: 'Sunday',
     course: 'Bandon Preserve',
     teeTime: '3:15 pm',
-    sideGame: {
-      format: 'nassau',
-      teamA: ['simon', 'ryan'],
-      teamB: ['matt', 'dan'],
+    shortCourse: true,
+    game: {
+      kind: 'skins',
+      formatId: 'skins',
+      label: 'Skins',
+      blurb:
+        'Short course — all four play their own ball. Lowest score alone wins the skin; ties carry over.',
+      field: ['simon', 'zach', 'emory', 'sammy'],
+      pointsNote: 'Each skin → points to that player. Carryovers make late holes matter.',
     },
   },
   {
@@ -129,10 +144,15 @@ export const schedule: Round[] = [
     weekday: 'Monday',
     course: "Shorty's",
     teeTime: '8:30 am',
-    sideGame: {
-      format: 'medal',
-      teamA: ['simon', 'dan'],
-      teamB: ['matt', 'ryan'],
+    shortCourse: true,
+    game: {
+      kind: 'wolf',
+      formatId: 'wolf',
+      label: 'Wolf',
+      blurb:
+        'Short course Wolf. Tee order below — that player is Wolf; they go alone or pick a partner after seeing tee shots. Win the hole as Wolf or as a team.',
+      order: ['simon', 'zach', 'emory', 'sammy'],
+      pointsNote: 'Hole win → points to Wolf (alone) or split with the partner.',
     },
   },
   {
@@ -142,10 +162,22 @@ export const schedule: Round[] = [
     weekday: 'Monday',
     course: 'Bandon Dunes',
     teeTime: '12:00 pm',
-    sideGame: {
-      format: 'sixes',
-      teamA: ['simon', 'matt'],
-      teamB: ['ryan', 'dan'],
+    shortCourse: false,
+    game: {
+      kind: 'sixes-1v1',
+      formatId: 'sixes-1v1',
+      label: 'Sixes · 1v1',
+      blurb:
+        'Three 6-hole matches. Everyone plays everyone — fresh opponent each six.',
+      matches: [
+        { holes: '1–6', a: 'simon', b: 'zach' },
+        { holes: '1–6', a: 'emory', b: 'sammy' },
+        { holes: '7–12', a: 'simon', b: 'emory' },
+        { holes: '7–12', a: 'zach', b: 'sammy' },
+        { holes: '13–18', a: 'simon', b: 'sammy' },
+        { holes: '13–18', a: 'zach', b: 'emory' },
+      ],
+      pointsNote: 'Each 6-hole match win → points. Ties split. Skins still count all 18.',
     },
   },
   {
@@ -155,10 +187,15 @@ export const schedule: Round[] = [
     weekday: 'Tuesday',
     course: 'Pacific Dunes',
     teeTime: '7:30 am',
-    sideGame: {
-      format: 'match-presses',
-      teamA: ['simon', 'ryan'],
-      teamB: ['matt', 'dan'],
+    shortCourse: false,
+    game: {
+      kind: 'best-ball',
+      formatId: 'best-ball-nassau',
+      label: 'Best Ball Nassau',
+      blurb: 'New partners. Front nine, back nine, and overall — three matches in one.',
+      teamA: ['simon', 'emory'],
+      teamB: ['zach', 'sammy'],
+      pointsNote: 'Each Nassau segment win → points to that pair. Plus skins.',
     },
   },
   {
@@ -168,10 +205,15 @@ export const schedule: Round[] = [
     weekday: 'Tuesday',
     course: 'Old McDonald',
     teeTime: '1:00 pm',
-    sideGame: {
-      format: 'stableford',
-      teamA: ['simon', 'dan'],
-      teamB: ['matt', 'ryan'],
+    shortCourse: false,
+    game: {
+      kind: 'wolf',
+      formatId: 'wolf',
+      label: 'Wolf',
+      blurb:
+        'Full-course Wolf with a shuffled tee order. Blind Wolf doubles the hole if you call it before anyone tees.',
+      order: ['sammy', 'emory', 'zach', 'simon'],
+      pointsNote: 'Hole wins → trip points. Blind Wolf success is worth double.',
     },
   },
   {
@@ -181,17 +223,19 @@ export const schedule: Round[] = [
     weekday: 'Wednesday',
     course: 'Sheep Ranch',
     teeTime: '8:30 am',
-    sideGame: {
-      format: 'finale-nassau',
-      teamA: ['simon', 'matt'],
-      teamB: ['ryan', 'dan'],
+    shortCourse: false,
+    game: {
+      kind: 'best-ball',
+      formatId: 'finale-skins-match',
+      label: 'Finale · Best Ball + Skins',
+      blurb:
+        'Last pairing of the trip. 18-hole best-ball match, and skins are doubled on the back nine.',
+      teamA: ['simon', 'sammy'],
+      teamB: ['zach', 'emory'],
+      pointsNote: 'Match win → points to the pair. Double skins on 10–18.',
     },
   },
 ]
-
-export function pairLabel(pair: [PlayerId, PlayerId]): string {
-  return `${playerName(pair[0])} & ${playerName(pair[1])}`
-}
 
 export function roundsByDay(): { dateLabel: string; weekday: string; rounds: Round[] }[] {
   const order: string[] = []

@@ -1,6 +1,6 @@
 # Bandon
 
-Trip hub for the **Nov 15–18, 2026** Bandon Dunes golf week: tee schedule, The Bandon Cup (week-long best-ball match), and per-round games with rotating partners and formats.
+Trip hub for the **Nov 15–18, 2026** Bandon week: tee schedule, individual trip points (match wins + skins), and per-round games with mixed formats.
 
 ## Quick start
 
@@ -9,14 +9,25 @@ npm install
 npm run dev
 ```
 
-## Edit the trip
+## The four
 
-All schedule, players, Cup sides, pairings, and formats live in [`src/data/trip.ts`](src/data/trip.ts).
+**Simon, Zach, Emory, Sammy** — edit in [`src/data/trip.ts`](src/data/trip.ts).
 
-Default players are **Simon, Matt, Ryan, Dan** — change the names there and the UI updates everywhere.
+## How scoring works
 
-## How the games work
+No fixed trip teams. Everyone banks their own points from:
 
-- **Always best ball** — every competition uses two-man best ball.
-- **The Bandon Cup** — fixed sides (Simon/Matt vs Ryan/Dan) across all seven rounds; 1 point per round.
-- **Round games** — partners and formats rotate each tee time (match play, Nassau, medal, sixes, Stableford, presses, finale Nassau).
+- **Match wins** — best-ball matches, Nassau segments, Wolf holes, 6-hole 1v1s
+- **Skins** — low score alone on a hole (carryovers stack)
+
+## Round formats
+
+| Round | Course | Format |
+|-------|--------|--------|
+| Nov 15 am | Bandon Trails | Best ball match + skins |
+| Nov 15 pm | Bandon Preserve *(short)* | Skins |
+| Nov 16 am | Shorty's *(short)* | Wolf |
+| Nov 16 pm | Bandon Dunes | Sixes · 1v1 |
+| Nov 17 am | Pacific Dunes | Best ball Nassau |
+| Nov 17 pm | Old McDonald | Wolf |
+| Nov 18 am | Sheep Ranch | Finale best ball + double skins |
