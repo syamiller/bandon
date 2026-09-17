@@ -1,0 +1,73 @@
+:root {
+  --sand: #9eb6a8;
+  --sand-deep: #6d8f7c;
+  --fog: #dce7ec;
+  --sky: #7a9aab;
+  --dune: #23483c;
+  --dune-deep: #123028;
+  --foam: #f2f6f7;
+  --ink: #10241c;
+  --muted: #4d6460;
+  --line: color-mix(in srgb, var(--dune) 16%, transparent);
+  --hero-overlay: linear-gradient(
+    165deg,
+    rgba(12, 32, 40, 0.58) 0%,
+    rgba(18, 48, 40, 0.28) 48%,
+    rgba(12, 28, 34, 0.78) 100%
+  );
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Outfit', system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--foam);
+  font-family: var(--font-body);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 1.25rem;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background:
+    radial-gradient(ellipse 110% 70% at 0% 0%, #c5d8e0 0%, transparent 55%),
+    radial-gradient(ellipse 80% 50% at 100% 10%, #b7cfc4 0%, transparent 45%),
+    linear-gradient(180deg, #e4eef1 0%, var(--foam) 42%, #e2ebe8 100%);
+  background-attachment: fixed;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+}
