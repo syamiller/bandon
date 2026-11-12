@@ -20,6 +20,9 @@ export type Scorecard = {
   tee: string
   rating?: number
   slope?: number
+  /** Course-rating par and rated hole count for GHIN course-handicap conversion. */
+  ratingPar?: number
+  ratingHoles?: number
   source: string
   holesDetail: Hole[]
 }
@@ -50,6 +53,8 @@ export const trails = card(
     tee: 'Green',
     rating: 72.0,
     slope: 137,
+    ratingPar: 71,
+    ratingHoles: 18,
     source: 'GolfPass / Bandon Trails scorecard',
   },
   [
@@ -84,6 +89,10 @@ export const preserve = card(
     id: 'preserve',
     name: 'Bandon Preserve',
     tee: 'Back',
+    rating: 53.1,
+    slope: 105,
+    ratingPar: 54,
+    ratingHoles: 18,
     source: 'Bandon Dunes Golf Resort + GolfPass (13-hole card)',
   },
   [
@@ -114,6 +123,8 @@ export const shortys = card(
     tee: 'Back',
     rating: 56.2,
     slope: 87,
+    ratingPar: 54,
+    ratingHoles: 18,
     source: "GolfPass Shorty's card + hole 19 from course reviews",
   },
   [
@@ -147,6 +158,8 @@ export const dunes = card(
     tee: 'Green',
     rating: 72.2,
     slope: 130,
+    ratingPar: 72,
+    ratingHoles: 18,
     source: 'GolfPass / Bandon Dunes scorecard',
   },
   [
@@ -179,6 +192,8 @@ export const pacific = card(
     tee: 'Green',
     rating: 70.5,
     slope: 128,
+    ratingPar: 71,
+    ratingHoles: 18,
     source: 'GolfPass / Pacific Dunes scorecard',
   },
   [
@@ -211,6 +226,8 @@ export const oldMac = card(
     tee: 'Green',
     rating: 71.3,
     slope: 126,
+    ratingPar: 71,
+    ratingHoles: 18,
     source: 'GolfPass / Old Macdonald scorecard',
   },
   [
@@ -243,6 +260,8 @@ export const sheep = card(
     tee: 'Green',
     rating: 70.8,
     slope: 121,
+    ratingPar: 72,
+    ratingHoles: 18,
     source: 'GolfPass / Sheep Ranch scorecard',
   },
   [

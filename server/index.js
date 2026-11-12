@@ -5,6 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   patchRound,
+  patchTeamAssignments,
   readScores,
   storageMode,
   writeScores,
@@ -37,7 +38,21 @@ app.put('/api/scores', async (req, res) => {
       res.status(400).json({ error: 'scores object required' })
       return
     }
-    const store = await writeScores({ scores: req.body.scores })
+    const current = await readScores()
+    const store = await writeScores({ ...current, scores: req.body.scores })
+    res.json({ ...store, storage: storageMode() })
+  } catch (err) {
+    res.status(500).json({ error: err?.message || 'Server error' })
+  }
+})
+
+app.patch('/api/scores', async (req, res) => {
+  try {
+    if (!req.body?.teamAssignments || typeof req.body.teamAssignments !== 'object') {
+      res.status(400).json({ error: 'teamAssignments object required' })
+      return
+    }
+    const store = await patchTeamAssignments(req.body.teamAssignments)
     res.json({ ...store, storage: storageMode() })
   } catch (err) {
     res.status(500).json({ error: err?.message || 'Server error' })
@@ -46,11 +61,13 @@ app.put('/api/scores', async (req, res) => {
 
 app.patch('/api/scores/:roundId', async (req, res) => {
   try {
-    if (!req.body?.roundScores || typeof req.body.roundScores !== 'object') {
-      res.status(400).json({ error: 'roundScores object required' })
+    const hasScores = req.body?.roundScores && typeof req.body.roundScores === 'object'
+    const hasCtp = Array.isArray(req.body?.closestToPin)
+    if (!hasScores && !hasCtp) {
+      res.status(400).json({ error: 'roundScores or closestToPin required' })
       return
     }
-    const store = await patchRound(req.params.roundId, req.body.roundScores)
+    const store = await patchRound(req.params.roundId, req.body.roundScores, req.body.closestToPin)
     res.json({ ...store, storage: storageMode() })
   } catch (err) {
     res.status(500).json({ error: err?.message || 'Server error' })

@@ -1,4 +1,4 @@
-import { patchRound, readScores, storageMode, writeScores } from '../../lib/scores-store.js'
+import { patchTeamAssignments, readScores, storageMode, writeScores } from '../../lib/scores-store.js'
 
 function send(res, status, body) {
   res.statusCode = status
@@ -37,7 +37,19 @@ export default async function handler(req, res) {
         send(res, 400, { error: 'scores object required' })
         return
       }
-      const store = await writeScores({ scores: body.scores })
+      const current = await readScores()
+      const store = await writeScores({ ...current, scores: body.scores })
+      send(res, 200, { ...store, storage: storageMode() })
+      return
+    }
+
+    if (req.method === 'PATCH') {
+      const body = await readBody(req)
+      if (!body?.teamAssignments || typeof body.teamAssignments !== 'object') {
+        send(res, 400, { error: 'teamAssignments object required' })
+        return
+      }
+      const store = await patchTeamAssignments(body.teamAssignments)
       send(res, 200, { ...store, storage: storageMode() })
       return
     }

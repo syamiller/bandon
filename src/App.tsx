@@ -1,10 +1,13 @@
+import { useCallback, useMemo, useState } from 'react'
 import {
   pairLabel,
   playerName,
   players,
   roundsByDay,
-  schedule,
-  strokesOffLow,
+  createSchedule,
+  defaultTeamAssignments,
+  sameTeamAssignments,
+  type TeamAssignments,
   tripRace,
   type Round,
   type RoundGame,
@@ -15,7 +18,12 @@ import './App.css'
 const HERO_IMAGE = '/bandon-dunes-hero.jpg'
 
 function App() {
-  const days = roundsByDay()
+  const [teamAssignments, setTeamAssignments] = useState<TeamAssignments>(defaultTeamAssignments)
+  const updateTeamAssignments = useCallback((next: TeamAssignments) => {
+    setTeamAssignments((current) => sameTeamAssignments(current, next) ? current : next)
+  }, [])
+  const schedule = useMemo(() => createSchedule(teamAssignments), [teamAssignments])
+  const days = roundsByDay(schedule)
 
   return (
     <div className="page">
@@ -36,10 +44,10 @@ function App() {
         </nav>
         <div className="hero__copy">
           <p className="brand">Bandon</p>
-          <h1>Seven rounds. Match wins and skins.</h1>
+          <h1>Seven rounds. Every point live.</h1>
           <p className="hero__lede">
-            Nov 15–18, 2026 — Simon, Zach, Emory, and Sammy. Live scoring with handicaps —
-            everyone plays off Simon.
+            Nov 15–18, 2026 — Simon, Zach, Emory, and Sammy. GHIN-adjusted matches, trip
+            Stableford, and shared live scoring.
           </p>
           <div className="hero__ctas">
             <a className="btn btn--solid" href="#scoring">
@@ -54,17 +62,12 @@ function App() {
 
       <main>
         <section className="section section--players" aria-label="Players">
-          <p className="eyebrow">The four · playing off Simon</p>
+          <p className="eyebrow">The four · GHIN Handicap Index</p>
           <ul className="players">
-            {players.map((p) => (
-              <li key={p.id}>
-                {p.name}
-                <span className="players__hcp">
-                  {p.handicap}
-                  {strokesOffLow(p.id) > 0 ? ` · +${strokesOffLow(p.id)}` : ' · scratch'}
-                </span>
-              </li>
-            ))}
+            {teamAssignments.slots.map((id, i) => {
+              const p = players.find((player) => player.id === id)!
+              return <li key={p.id}><span className="players__slot">Player {i + 1} · </span>{p.name}<span className="players__hcp">GHIN {p.handicap.toFixed(1)}</span></li>
+            })}
           </ul>
         </section>
 
@@ -73,7 +76,7 @@ function App() {
             <p className="eyebrow">Tee sheet</p>
             <h2>Full schedule</h2>
             <p className="section__lede">
-              Four days, seven tee times — Preserve and Shorty’s are the short courses.
+              Seven rounds across four days. Partners stay together through each day’s team games; the final day is individual St. James Roll.
             </p>
           </div>
           <div className="days">
@@ -139,8 +142,8 @@ function App() {
             <p className="eyebrow">Every tee time</p>
             <h2>Round games</h2>
             <p className="section__lede">
-              Best ball, Wolf, closest-to-the-pin, and 6-hole 1v1s — skins are always on
-              top, every round.
+              Nassau, best ball, combined net, singles, and St. James Roll — every round’s
+              point pool is shown with its live pairings.
             </p>
           </div>
           <div className="games">
@@ -155,18 +158,22 @@ function App() {
             <p className="eyebrow">Live card</p>
             <h2>Scorekeeping</h2>
             <p className="section__lede">
-              Full scorecards for every course. Scores sync for everyone — match points and
-              skins calculate from each round’s format. Playing off Simon.
+              Full scorecards for every course. Gross scores sync for everyone — course
+              handicaps, round points, Stableford, and the trip board recalculate live.
             </p>
           </div>
-          <LiveScoring />
+          <LiveScoring
+            rounds={schedule}
+            teamAssignments={teamAssignments}
+            onTeamAssignmentsChange={updateTeamAssignments}
+          />
         </section>
       </main>
 
       <footer className="footer">
         <p>Bandon Dunes Golf Resort · November 2026</p>
         <p className="footer__note">
-          Edit formats and pairings in <code>src/data/trip.ts</code>
+          Team slots, match pairings, and GHIN indexes update from the live scoring card.
         </p>
       </footer>
     </div>
@@ -200,63 +207,39 @@ function GameDetail({ game }: { game: RoundGame }) {
       <div className="game__match">
         <div className="game__side">
           <p className="game__side-label">Side A</p>
-          <p className="game__pair">{pairLabel(game.teamA)}</p>
+          <p className="game__pair">{pairLabel(game.teams[0])}</p>
         </div>
         <p className="game__vs">vs</p>
         <div className="game__side">
           <p className="game__side-label">Side B</p>
-          <p className="game__pair">{pairLabel(game.teamB)}</p>
+          <p className="game__pair">{pairLabel(game.teams[1])}</p>
         </div>
       </div>
     )
   }
 
-  if (game.kind === 'closest-to-pin') {
+  if (game.kind === 'singles') {
     return (
-      <ul className="game__field">
-        {game.field.map((id) => (
-          <li key={id}>{playerName(id)}</li>
-        ))}
-      </ul>
-    )
-  }
-
-  if (game.kind === 'wolf') {
-    return (
-      <div className="game__wolf">
-        <p className="game__side-label">Starting tee order (rotates as Wolf)</p>
-        <ol className="game__order">
-          {game.order.map((id, i) => (
-            <li key={id}>
-              <span className="game__order-n">{i + 1}</span>
-              <span className="game__pair">{playerName(id)}</span>
-            </li>
-          ))}
-        </ol>
+      <div className="game__sixes">
+        <div className="game__side"><p className="game__side-label">Day teams</p><p className="game__pair">{pairLabel(game.teams[0])} · {pairLabel(game.teams[1])}</p></div>
+        <ul>{game.matches.map((match) => <li key={`${match.label}-${match.pair.join('-')}`}><span>{match.label}</span><span className="game__pair">{playerName(match.pair[0])} vs {playerName(match.pair[1])}</span></li>)}</ul>
       </div>
     )
   }
 
-  const blocks = ['1–6', '7–12', '13–18'] as const
+  if (game.kind === 'combined-stroke') {
+    return (
+      <div className="game__match">
+        <div className="game__side"><p className="game__side-label">Side A</p><p className="game__pair">{pairLabel(game.teams[0])}</p></div>
+        <p className="game__vs">vs</p>
+        <div className="game__side"><p className="game__side-label">Side B</p><p className="game__pair">{pairLabel(game.teams[1])}</p></div>
+      </div>
+    )
+  }
   return (
-    <div className="game__sixes">
-      {blocks.map((holes) => {
-        const matches = game.matches.filter((m) => m.holes === holes)
-        return (
-          <div key={holes} className="game__sixes-block">
-            <p className="game__side-label">Holes {holes}</p>
-            <ul>
-              {matches.map((m) => (
-                <li key={`${holes}-${m.a}-${m.b}`}>
-                  <span className="game__pair">{playerName(m.a)}</span>
-                  <span className="game__vs-inline">vs</span>
-                  <span className="game__pair">{playerName(m.b)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )
-      })}
+    <div className="game__wolf">
+      <p className="game__side-label">Individual net scoring · 6 dots available per hole</p>
+      <p className="game__pair">{game.blurb}</p>
     </div>
   )
 }

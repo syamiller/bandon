@@ -1,17 +1,18 @@
 import { scorecardsByRoundId, type Hole } from './data/scorecards'
 import {
-  pairLabel,
   playerName,
   players,
-  schedule,
+  teamForPlayer,
   type PlayerId,
+  type PlayerPair,
   type Round,
-  type RoundGame,
+  type Teams,
 } from './data/trip'
 import {
   emptyScoresForCard,
   netScore,
   playerIds,
+  type ClosestToPinScores,
   type HoleScore,
   type RoundScores,
 } from './scoring'
@@ -20,10 +21,7 @@ export type PointEvent = {
   roundId: string
   label: string
   detail: string
-  /** Weighted points toward standings. */
   points: Partial<Record<PlayerId, number>>
-  /** Raw skin count awarded (match events omit this). */
-  skinsWon?: Partial<Record<PlayerId, number>>
 }
 
 export type RoundResult = {
@@ -31,21 +29,28 @@ export type RoundResult = {
   course: string
   format: string
   events: PointEvent[]
-  matchPoints: Record<PlayerId, number>
-  /** Raw skins won (unique net winners; carry pot size). */
-  skinsWon: Record<PlayerId, number>
-  /** Skins toward standings (= skinsWon × SKIN_WEIGHT). */
-  skinPoints: Record<PlayerId, number>
-  total: Record<PlayerId, number>
+  points: Record<PlayerId, number>
+  stableford: Record<PlayerId, number>
+  stJamesDots: Record<PlayerId, number>
+  grossBirdies: Record<PlayerId, number>
+  eagles: Record<PlayerId, number>
+  holesInOne: Record<PlayerId, number>
+  netToPar: Record<PlayerId, number | null>
+  complete: Record<PlayerId, boolean>
 }
 
 export type TripStandings = {
   byPlayer: Record<
     PlayerId,
     {
-      match: number
-      skins: number
-      skinPoints: number
+      round: number
+      side: number
+      stableford: number
+      grossBirdies: number
+      eagles: number
+      holesInOne: number
+      closestToPin: number
+      bestNetRound: number | null
       total: number
       name: string
     }
@@ -53,386 +58,330 @@ export type TripStandings = {
   rounds: RoundResult[]
 }
 
-/** One skin is worth this fraction of a match point in trip standings. */
-export const SKIN_WEIGHT = 0.25
+export const ROUND_POINT_TOTALS: Partial<Record<Round['game']['formatId'], number>> = {
+  'trails-nassau': 8,
+  'preserve-singles': 4,
+  'shortys-combined': 4,
+  'bandon-best-ball': 8,
+  'old-mac-singles': 8,
+  'sheep-st-james': 8,
+  'pacific-nassau': 8,
+}
 
 function zero(): Record<PlayerId, number> {
   return { simon: 0, zach: 0, emory: 0, sammy: 0 }
 }
 
-function addPoints(
-  target: Record<PlayerId, number>,
-  pts: Partial<Record<PlayerId, number>>,
-) {
-  for (const id of playerIds()) {
-    target[id] += pts[id] ?? 0
-  }
+function sum(values: number[]) {
+  return values.reduce((a, b) => a + b, 0)
 }
 
-function netForHole(
+function addPoints(target: Record<PlayerId, number>, source: Partial<Record<PlayerId, number>>) {
+  for (const id of playerIds()) target[id] += source[id] ?? 0
+}
+
+function holeNet(
+  round: Round,
   scores: Record<PlayerId, HoleScore[]>,
   hole: Hole,
   holeIndex: number,
   playerId: PlayerId,
-): number | null {
-  return netScore(playerId, hole, scores[playerId]?.[holeIndex] ?? null)
+) {
+  const card = scorecardsByRoundId[round.id]
+  return card ? netScore(playerId, hole, scores[playerId]?.[holeIndex] ?? null, card) : null
 }
 
-function bestNet(
+function teamNet(
+  round: Round,
   scores: Record<PlayerId, HoleScore[]>,
   hole: Hole,
   holeIndex: number,
-  pair: [PlayerId, PlayerId],
-): number | null {
-  const a = netForHole(scores, hole, holeIndex, pair[0])
-  const b = netForHole(scores, hole, holeIndex, pair[1])
-  if (a == null && b == null) return null
-  if (a == null) return b
-  if (b == null) return a
-  return Math.min(a, b)
+  team: PlayerPair,
+) {
+  const nets = team.map((id) => holeNet(round, scores, hole, holeIndex, id))
+  const played = nets.filter((score): score is number => score != null)
+  return played.length ? Math.min(...played) : null
 }
 
-function awardSplit(
-  winners: PlayerId[],
-  amount: number,
-): Partial<Record<PlayerId, number>> {
-  if (winners.length === 0 || amount === 0) return {}
-  const each = amount / winners.length
-  const pts: Partial<Record<PlayerId, number>> = {}
-  for (const id of winners) pts[id] = each
-  return pts
+function allHaveScore(scores: Record<PlayerId, HoleScore[]>, ids: PlayerId[], index: number) {
+  return ids.every((id) => scores[id]?.[index] != null)
 }
 
-/**
- * Skins — individual net only.
- * - All four must have a score on the hole before it settles.
- * - Unique lowest net wins the pot; any tie carries (no skin awarded).
- * - Standings weight each skin at SKIN_WEIGHT (default ¼ match point).
- */
-function calcSkins(
+function addTeamWin(points: Record<PlayerId, number>, teams: Teams, winner: 0 | 1 | null, amount: number) {
+  for (const side of [0, 1] as const) {
+    const sideAmount = winner == null ? amount / 2 : winner === side ? amount : 0
+    for (const id of teams[side]) points[id] += sideAmount / 2
+  }
+}
+
+function matchResult(
   round: Round,
   scores: Record<PlayerId, HoleScore[]>,
-): PointEvent[] {
-  const card = scorecardsByRoundId[round.id]
-  if (!card) return []
-  const events: PointEvent[] = []
-  let pot = 0
-  const ids = playerIds()
-
-  card.holesDetail.forEach((hole, i) => {
-    const nets = ids.map((id) => ({
-      id,
-      net: netForHole(scores, hole, i, id),
-    }))
-    // Wait until the whole group has a net on this hole.
-    if (nets.some((n) => n.net == null)) return
-
-    const settled = nets as { id: PlayerId; net: number }[]
-    const low = Math.min(...settled.map((n) => n.net))
-    const winners = settled.filter((n) => n.net === low).map((n) => n.id)
-    pot += 1
-
-    if (winners.length !== 1) {
-      // Tie — no skin; pot carries to the next hole.
-      return
-    }
-
-    const won = pot
-    const weighted = won * SKIN_WEIGHT
-    const winner = winners[0]
-    const netsLabel = settled
-      .map((n) => `${playerName(n.id)} ${n.net}`)
-      .join(', ')
-    events.push({
-      roundId: round.id,
-      label: `Skin · hole ${hole.number}`,
-      detail:
-        won > 1
-          ? `${playerName(winner)} alone on net (${netsLabel}) · ${won} skins carried`
-          : `${playerName(winner)} alone on net (${netsLabel})`,
-      points: { [winner]: weighted },
-      skinsWon: { [winner]: won },
-    })
-    pot = 0
-  })
-
-  return events
-}
-
-function matchPlayResult(
-  holes: Hole[],
-  scores: Record<PlayerId, HoleScore[]>,
-  teamA: [PlayerId, PlayerId],
-  teamB: [PlayerId, PlayerId],
+  teams: Teams,
   start: number,
   end: number,
-): { winner: 'A' | 'B' | 'tie'; holesPlayed: number } {
+  pointValue: number,
+  label: string,
+  mode: 'match' | 'stroke',
+): PointEvent | null {
+  const card = scorecardsByRoundId[round.id]
+  if (!card) return null
+  let a = 0
+  let b = 0
+  let holesPlayed = 0
+  const scoreA: number[] = []
+  const scoreB: number[] = []
+  const allIds = [...teams[0], ...teams[1]]
+  for (let index = start; index < Math.min(end, card.holesDetail.length); index++) {
+    if (!allHaveScore(scores, allIds, index)) continue
+    holesPlayed++
+    const netA = teamNet(round, scores, card.holesDetail[index], index, teams[0])!
+    const netB = teamNet(round, scores, card.holesDetail[index], index, teams[1])!
+    scoreA.push(netA)
+    scoreB.push(netB)
+    if (mode === 'match') {
+      if (netA < netB) a++
+      else if (netB < netA) b++
+    }
+  }
+  if (!holesPlayed) return null
+  if (mode === 'stroke') {
+    a = sum(scoreA)
+    b = sum(scoreB)
+  }
+  const winner: 0 | 1 | null = a < b ? 0 : b < a ? 1 : null
+  const points = zero()
+  addTeamWin(points, teams, winner, pointValue)
+  const detail = mode === 'match'
+    ? `${teams[0].map(playerName).join(' & ')} ${a} · ${teams[1].map(playerName).join(' & ')} ${b} (${holesPlayed} holes)`
+    : `${teams[0].map(playerName).join(' & ')} ${a} · ${teams[1].map(playerName).join(' & ')} ${b} net (${holesPlayed} holes)`
+  return { roundId: round.id, label, detail, points }
+}
+
+function singleMatch(
+  round: Round,
+  scores: Record<PlayerId, HoleScore[]>,
+  teams: Teams,
+  pair: PlayerPair,
+  start: number,
+  end: number,
+  label: string,
+  pointValue: number,
+): PointEvent | null {
+  const card = scorecardsByRoundId[round.id]
+  if (!card) return null
+  const [a, b] = pair
   let aUp = 0
   let played = 0
-  for (let i = start; i < end; i++) {
-    const hole = holes[i]
-    const a = bestNet(scores, hole, i, teamA)
-    const b = bestNet(scores, hole, i, teamB)
-    if (a == null || b == null) continue
+  for (let index = start; index < Math.min(end, card.holesDetail.length); index++) {
+    if (!allHaveScore(scores, pair, index)) continue
     played++
-    if (a < b) aUp++
-    else if (b < a) aUp--
+    const scoreA = holeNet(round, scores, card.holesDetail[index], index, a)!
+    const scoreB = holeNet(round, scores, card.holesDetail[index], index, b)!
+    if (scoreA < scoreB) aUp++
+    else if (scoreB < scoreA) aUp--
   }
-  if (played === 0) return { winner: 'tie', holesPlayed: 0 }
-  if (aUp > 0) return { winner: 'A', holesPlayed: played }
-  if (aUp < 0) return { winner: 'B', holesPlayed: played }
-  return { winner: 'tie', holesPlayed: played }
-}
-
-function calcBestBall(
-  round: Round,
-  game: Extract<RoundGame, { kind: 'best-ball' }>,
-  scores: Record<PlayerId, HoleScore[]>,
-): PointEvent[] {
-  const card = scorecardsByRoundId[round.id]
-  if (!card) return []
-  const events: PointEvent[] = []
-  const holes = card.holesDetail
-
-  const segments =
-    game.formatId === 'best-ball-nassau'
-      ? [
-          { label: 'Nassau front', start: 0, end: 9 },
-          { label: 'Nassau back', start: 9, end: 18 },
-          { label: 'Nassau overall', start: 0, end: 18 },
-        ]
-      : [{ label: 'Best ball match', start: 0, end: holes.length }]
-
-  for (const seg of segments) {
-    const end = Math.min(seg.end, holes.length)
-    const result = matchPlayResult(holes, scores, game.teamA, game.teamB, seg.start, end)
-    if (result.holesPlayed === 0) continue
-    if (result.winner === 'tie') {
-      events.push({
-        roundId: round.id,
-        label: seg.label,
-        detail: `Halved · ${pairLabel(game.teamA)} vs ${pairLabel(game.teamB)}`,
-        points: awardSplit([...game.teamA, ...game.teamB], 0.5),
-      })
-    } else {
-      const winners = result.winner === 'A' ? game.teamA : game.teamB
-      events.push({
-        roundId: round.id,
-        label: seg.label,
-        detail: `${pairLabel(winners)} win`,
-        points: awardSplit([...winners], 1),
-      })
-    }
-  }
-  return events
-}
-
-function parseHoleRange(label: string): [number, number] | null {
-  const m = label.match(/(\d+)\s*[–-]\s*(\d+)/)
-  if (!m) return null
-  return [Number(m[1]) - 1, Number(m[2])]
-}
-
-function calcSixes(
-  round: Round,
-  game: Extract<RoundGame, { kind: 'sixes-1v1' }>,
-  scores: Record<PlayerId, HoleScore[]>,
-): PointEvent[] {
-  const card = scorecardsByRoundId[round.id]
-  if (!card) return []
-  const events: PointEvent[] = []
-
-  for (const match of game.matches) {
-    const range = parseHoleRange(match.holes)
-    if (!range) continue
-    const [start, end] = range
-    let aUp = 0
-    let played = 0
-    for (let i = start; i < end; i++) {
-      const hole = card.holesDetail[i]
-      const a = netForHole(scores, hole, i, match.a)
-      const b = netForHole(scores, hole, i, match.b)
-      if (a == null || b == null) continue
-      played++
-      if (a < b) aUp++
-      else if (b < a) aUp--
-    }
-    if (played === 0) continue
-    if (aUp === 0) {
-      events.push({
-        roundId: round.id,
-        label: `Sixes ${match.holes}`,
-        detail: `${playerName(match.a)} vs ${playerName(match.b)} · halved`,
-        points: awardSplit([match.a, match.b], 0.5),
-      })
-    } else {
-      const winner = aUp > 0 ? match.a : match.b
-      events.push({
-        roundId: round.id,
-        label: `Sixes ${match.holes}`,
-        detail: `${playerName(winner)} beats ${playerName(aUp > 0 ? match.b : match.a)}`,
-        points: { [winner]: 1 },
-      })
-    }
-  }
-  return events
-}
-
-/**
- * Closest-to-pin: unique lowest gross on the hole wins (score proxy for distance).
- * Misses the green aren't tracked separately — enter only if on/near green if you want.
- */
-function calcClosestToPin(
-  round: Round,
-  scores: Record<PlayerId, HoleScore[]>,
-): PointEvent[] {
-  const card = scorecardsByRoundId[round.id]
-  if (!card) return []
-  const events: PointEvent[] = []
-  const ids = playerIds()
-
-  card.holesDetail.forEach((hole, i) => {
-    const grosses = ids
-      .map((id) => ({ id, g: scores[id]?.[i] ?? null }))
-      .filter((x): x is { id: PlayerId; g: number } => x.g != null)
-    if (grosses.length < 2) return
-    const low = Math.min(...grosses.map((x) => x.g))
-    const winners = grosses.filter((x) => x.g === low).map((x) => x.id)
-    if (winners.length === 1) {
-      events.push({
-        roundId: round.id,
-        label: `CTP · hole ${hole.number}`,
-        detail: playerName(winners[0]),
-        points: { [winners[0]]: 1 },
-      })
-    }
-  })
-  return events
-}
-
-/**
- * Wolf: rotating wolf plays alone vs best net of the other three.
- * Wolf wins hole → 1 pt. Field unique low wins → 1 pt. Ties → no award.
- */
-function calcWolf(
-  round: Round,
-  game: Extract<RoundGame, { kind: 'wolf' }>,
-  scores: Record<PlayerId, HoleScore[]>,
-): PointEvent[] {
-  const card = scorecardsByRoundId[round.id]
-  if (!card) return []
-  const events: PointEvent[] = []
-  const order = game.order
-
-  card.holesDetail.forEach((hole, i) => {
-    const wolf = order[i % order.length]
-    const field = playerIds().filter((id) => id !== wolf)
-    const wolfNet = netForHole(scores, hole, i, wolf)
-    const fieldNets = field
-      .map((id) => ({ id, net: netForHole(scores, hole, i, id) }))
-      .filter((x): x is { id: PlayerId; net: number } => x.net != null)
-    if (wolfNet == null || fieldNets.length === 0) return
-    const fieldBest = Math.min(...fieldNets.map((f) => f.net))
-    if (wolfNet < fieldBest) {
-      events.push({
-        roundId: round.id,
-        label: `Wolf · hole ${hole.number}`,
-        detail: `${playerName(wolf)} alone beats field`,
-        points: { [wolf]: 1 },
-      })
-    } else if (fieldBest < wolfNet) {
-      const winners = fieldNets.filter((f) => f.net === fieldBest).map((f) => f.id)
-      if (winners.length === 1) {
-        events.push({
-          roundId: round.id,
-          label: `Wolf · hole ${hole.number}`,
-          detail: `Field · ${playerName(winners[0])} (Wolf ${playerName(wolf)})`,
-          points: { [winners[0]]: 1 },
-        })
-      }
-    }
-  })
-  return events
-}
-
-function calcMatchEvents(
-  round: Round,
-  scores: Record<PlayerId, HoleScore[]>,
-): PointEvent[] {
-  const game = round.game
-  switch (game.kind) {
-    case 'best-ball':
-      return calcBestBall(round, game, scores)
-    case 'sixes-1v1':
-      return calcSixes(round, game, scores)
-    case 'closest-to-pin':
-      return calcClosestToPin(round, scores)
-    case 'wolf':
-      return calcWolf(round, game, scores)
-    default:
-      return []
-  }
-}
-
-export function calculateRoundResult(
-  round: Round,
-  allScores: RoundScores,
-): RoundResult {
-  const card = scorecardsByRoundId[round.id]
-  const scores: Record<PlayerId, HoleScore[]> = card
-    ? (allScores[round.id] ?? emptyScoresForCard(card))
-    : {
-        simon: [],
-        zach: [],
-        emory: [],
-        sammy: [],
-      }
-  const matchEvents = calcMatchEvents(round, scores)
-  // Short-course CTP rounds: CTP is the match format — don't double-count skins.
-  const skinEvents = round.game.kind === 'closest-to-pin' ? [] : calcSkins(round, scores)
-
-  const matchPoints = zero()
-  const skinsWon = zero()
-  const skinPoints = zero()
-  for (const e of matchEvents) addPoints(matchPoints, e.points)
-  for (const e of skinEvents) {
-    addPoints(skinPoints, e.points)
-    if (e.skinsWon) addPoints(skinsWon, e.skinsWon)
-  }
-
-  const total = zero()
-  addPoints(total, matchPoints)
-  addPoints(total, skinPoints)
-
+  if (!played) return null
+  const teamA = teamForPlayer(teams, a)
+  const teamB = teamForPlayer(teams, b)
+  const winner = aUp > 0 ? 0 : aUp < 0 ? 1 : null
+  const points = zero()
+  addTeamWin(points, [teamA, teamB], winner, pointValue)
   return {
     roundId: round.id,
-    course: round.course,
-    format: round.game.label,
-    events: [...matchEvents, ...skinEvents],
-    matchPoints,
-    skinsWon,
-    skinPoints,
-    total,
+    label,
+    detail: `${playerName(a)} vs ${playerName(b)} · ${Math.abs(aUp)} up${winner == null ? ' · halved' : ''} (${played} holes)`,
+    points,
   }
 }
 
-export function calculateTripStandings(allScores: RoundScores): TripStandings {
-  const rounds = schedule.map((r) => calculateRoundResult(r, allScores))
-  const byPlayer = Object.fromEntries(
-    players.map((p) => [
-      p.id,
-      { match: 0, skins: 0, skinPoints: 0, total: 0, name: p.name },
-    ]),
-  ) as TripStandings['byPlayer']
+function awardPlaces(values: Array<{ id: PlayerId; score: number }>, prizes: number[], lowWins = false) {
+  const eligible = values.filter(({ score }) => Number.isFinite(score))
+  const sorted = [...eligible].sort((a, b) => lowWins ? a.score - b.score : b.score - a.score)
+  const awards = zero()
+  let position = 0
+  while (position < sorted.length && position < prizes.length) {
+    let end = position + 1
+    while (end < sorted.length && sorted[end].score === sorted[position].score) end++
+    const pool = sum(prizes.slice(position, Math.min(end, prizes.length)))
+    for (const entry of sorted.slice(position, end)) awards[entry.id] += pool / (end - position)
+    position = end
+  }
+  return awards
+}
 
-  for (const round of rounds) {
+function roundResult(round: Round, allScores: RoundScores): RoundResult {
+  const card = scorecardsByRoundId[round.id]
+  const scores = card ? (allScores[round.id] ?? emptyScoresForCard(card)) : emptyScoresForCard({
+    id: round.id, name: round.course, holes: 0, par: 0, tee: '', source: '', holesDetail: [],
+  })
+  const points = zero()
+  const events: PointEvent[] = []
+  const stableford = zero()
+  const stJamesDots = zero()
+  const grossBirdies = zero()
+  const eagles = zero()
+  const holesInOne = zero()
+  const netToPar: Record<PlayerId, number | null> = { simon: null, zach: null, emory: null, sammy: null }
+  const complete: Record<PlayerId, boolean> = { simon: false, zach: false, emory: false, sammy: false }
+
+  if (card) {
     for (const id of playerIds()) {
-      byPlayer[id].match += round.matchPoints[id]
-      byPlayer[id].skins += round.skinsWon[id]
-      byPlayer[id].skinPoints += round.skinPoints[id]
-      byPlayer[id].total += round.total[id]
+      let played = 0
+      let netTotal = 0
+      let parTotal = 0
+      card.holesDetail.forEach((hole, index) => {
+        const gross = scores[id]?.[index]
+        if (gross == null) return
+        played++
+        parTotal += hole.par
+        const net = netScore(id, hole, gross, card)!
+        netTotal += net
+        const relative = net - hole.par
+        stableford[id] += relative <= -4 ? 6 : relative === -3 ? 5 : relative === -2 ? 4 : relative === -1 ? 3 : relative === 0 ? 2 : relative === 1 ? 1 : 0
+        if (gross === hole.par - 1) grossBirdies[id]++
+        if (gross === hole.par - 2) eagles[id]++
+        if (gross === 1) holesInOne[id]++
+      })
+      complete[id] = played === card.holes
+      if (played) netToPar[id] = netTotal - parTotal
     }
   }
 
-  return { byPlayer, rounds }
+  if (round.game.kind === 'best-ball') {
+    const segments = round.game.formatId === 'trails-nassau' || round.game.formatId === 'pacific-nassau'
+      ? [
+          { label: 'Front 9', start: 0, end: 9, points: 2 },
+          { label: 'Back 9', start: 9, end: 18, points: 2 },
+          { label: 'Overall', start: 0, end: 18, points: 4 },
+        ]
+      : [{ label: '18-hole match', start: 0, end: 18, points: 8 }]
+    for (const segment of segments) {
+      const event = matchResult(round, scores, round.game.teams, segment.start, segment.end, segment.points, segment.label, round.game.play)
+      if (event) events.push(event)
+    }
+  }
+
+  if (round.game.kind === 'singles') {
+    for (const match of round.game.matches) {
+      const event = singleMatch(round, scores, round.game.teams, match.pair, match.start, match.end, `${match.label} · ${playerName(match.pair[0])} vs ${playerName(match.pair[1])}`, 2)
+      if (event) events.push(event)
+    }
+  }
+
+  if (round.game.kind === 'combined-stroke' && card) {
+    const teams = round.game.teams
+    const totals = [0, 0]
+    let played = 0
+    card.holesDetail.forEach((hole, index) => {
+      if (!allHaveScore(scores, [...teams[0], ...teams[1]], index)) return
+      played++
+      totals[0] += teams[0].reduce((n, id) => n + netScore(id, hole, scores[id][index], card)!, 0)
+      totals[1] += teams[1].reduce((n, id) => n + netScore(id, hole, scores[id][index], card)!, 0)
+    })
+    if (played) {
+      const winner: 0 | 1 | null = totals[0] < totals[1] ? 0 : totals[1] < totals[0] ? 1 : null
+      const eventPoints = zero()
+      addTeamWin(eventPoints, teams, winner, 4)
+      events.push({ roundId: round.id, label: 'Combined net strokes', detail: `${totals[0]} · ${totals[1]} net (${played} holes)`, points: eventPoints })
+    }
+  }
+
+  if (round.game.kind === 'st-james' && card) {
+    let playedHoles = 0
+    card.holesDetail.forEach((hole, index) => {
+      if (!allHaveScore(scores, playerIds(), index)) return
+      playedHoles++
+      const nets = playerIds().map((id) => ({ id, score: netScore(id, hole, scores[id][index], card)! }))
+      const holeDots = zero()
+      for (const player of nets) {
+        holeDots[player.id] = nets.filter((opponent) => opponent.id !== player.id && opponent.score > player.score).length
+        stJamesDots[player.id] += holeDots[player.id]
+      }
+      events.push({
+        roundId: round.id,
+        label: `Hole ${hole.number} · St. James dots`,
+        detail: nets.map(({ id }) => `${playerName(id)} ${holeDots[id]}`).join(' · '),
+        points: {},
+      })
+    })
+    const totals = playerIds().map((id) => ({ id, score: stJamesDots[id] }))
+    if (playedHoles) {
+      const eventPoints = awardPlaces(totals, [5, 2, 1])
+      events.push({
+        roundId: round.id,
+        label: 'St. James Roll · 6 dots per hole',
+        detail: `${playedHoles} holes · ${totals.map(({ id, score }) => `${playerName(id)} ${score}`).join(' · ')} · trip finish 5 / 2 / 1`,
+        points: eventPoints,
+      })
+    }
+  }
+
+  for (const event of events) addPoints(points, event.points)
+  return { roundId: round.id, course: round.course, format: round.game.label, events, points, stableford, stJamesDots, grossBirdies, eagles, holesInOne, netToPar, complete }
+}
+
+export function calculateRoundResult(round: Round, allScores: RoundScores) {
+  return roundResult(round, allScores)
+}
+
+export function calculateTripStandings(
+  allScores: RoundScores,
+  closestToPin: ClosestToPinScores,
+  rounds: Round[],
+): TripStandings {
+  const roundResults = rounds.map((round) => roundResult(round, allScores))
+  const byPlayer = Object.fromEntries(players.map((player) => [player.id, {
+    round: 0,
+    side: 0,
+    stableford: 0,
+    grossBirdies: 0,
+    eagles: 0,
+    holesInOne: 0,
+    closestToPin: 0,
+    bestNetRound: null,
+    total: 0,
+    name: player.name,
+  }])) as TripStandings['byPlayer']
+
+  for (const result of roundResults) {
+    for (const id of playerIds()) {
+      byPlayer[id].round += result.points[id]
+      byPlayer[id].stableford += result.stableford[id]
+      byPlayer[id].grossBirdies += result.grossBirdies[id]
+      byPlayer[id].eagles += result.eagles[id]
+      byPlayer[id].holesInOne += result.holesInOne[id]
+      if (result.complete[id] && result.netToPar[id] != null) {
+        const previous = byPlayer[id].bestNetRound
+        byPlayer[id].bestNetRound = previous == null ? result.netToPar[id] : Math.min(previous, result.netToPar[id]!)
+      }
+    }
+    for (const round of rounds) {
+      if (round.id !== result.roundId) continue
+      if (round.id !== 'preserve' && round.id !== 'shortys') continue
+      for (const winner of closestToPin[round.id] ?? []) if (winner) byPlayer[winner].closestToPin++
+    }
+  }
+
+  const tripHasScores = Object.values(allScores).some((rows) => Object.values(rows).some((holes) => holes.some((score) => score != null)))
+  if (tripHasScores) addPointsToSide(byPlayer, awardPlaces(players.map(({ id }) => ({ id, score: byPlayer[id].stableford })), [5, 2, 1]))
+
+  const bestRounds = players.flatMap(({ id }) => byPlayer[id].bestNetRound == null ? [] : [{ id, score: byPlayer[id].bestNetRound! }])
+  if (bestRounds.length) addPointsToSide(byPlayer, awardPlaces(bestRounds, [2], true))
+  if (Math.max(...players.map(({ id }) => byPlayer[id].grossBirdies)) > 0) {
+    addPointsToSide(byPlayer, awardPlaces(players.map(({ id }) => ({ id, score: byPlayer[id].grossBirdies })), [2]))
+  }
+  const maxCtp = Math.max(...players.map(({ id }) => byPlayer[id].closestToPin))
+  if (maxCtp > 0) addPointsToSide(byPlayer, awardPlaces(players.map(({ id }) => ({ id, score: byPlayer[id].closestToPin })), [1]))
+  for (const id of playerIds()) {
+    byPlayer[id].side += byPlayer[id].eagles * 5
+    byPlayer[id].side += byPlayer[id].holesInOne * 10
+    byPlayer[id].side += roundResults.filter((result) => result.roundId === 'shortys').reduce((n, result) => n + result.holesInOne[id] * 5, 0)
+    byPlayer[id].total = byPlayer[id].round + byPlayer[id].side
+  }
+  return { byPlayer, rounds: roundResults }
+}
+
+function addPointsToSide(byPlayer: TripStandings['byPlayer'], points: Record<PlayerId, number>) {
+  for (const id of playerIds()) byPlayer[id].side += points[id]
 }

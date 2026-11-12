@@ -208,6 +208,13 @@
   margin-top: 0.15rem;
 }
 
+.players__slot {
+  font-family: var(--font-body);
+  color: var(--muted);
+  font-size: 0.72em;
+  font-weight: 500;
+}
+
 /* —— Schedule —— */
 .days {
   display: grid;
@@ -732,6 +739,153 @@
   color: var(--sand-deep);
   font-weight: 600;
   white-space: nowrap;
+}
+
+.sidegames,
+.teams-panel,
+.ctp-panel {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--dune) 5%, var(--foam));
+}
+
+.sidegames > h3,
+.teams-panel h3,
+.ctp-panel h3 {
+  color: var(--dune-deep);
+  font-size: 1.35rem;
+}
+
+.sidegames__grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 700px) {
+  .sidegames__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.sidegame {
+  min-width: 0;
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--foam) 90%, white);
+}
+
+.sidegame__head,
+.teams-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+}
+
+.sidegame__head h4 {
+  color: var(--dune-deep);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
+.sidegame__head span {
+  color: var(--sand-deep);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.sidegame ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.65rem 0 0;
+}
+
+.sidegame li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.sidegame li b {
+  color: var(--dune-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+.sidegames__note,
+.teams-panel__head p {
+  margin-top: 0.65rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.teams-panel__shuffle {
+  border: 1px solid var(--dune);
+  background: var(--dune);
+  color: var(--foam);
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.teams-panel__shuffle:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.teams-panel__grid {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 700px) {
+  .teams-panel__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1000px) {
+  .teams-panel__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.teams-panel__day {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.8rem;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--foam) 90%, white);
+  font-size: 0.82rem;
+}
+
+.teams-panel__day > span,
+.teams-panel__day small {
+  color: var(--muted);
+}
+
+.teams-panel__day b {
+  color: var(--dune-deep);
+  font-weight: 600;
+}
+
+.ctp-panel {
+  margin: 1.75rem 0;
+}
+
+.ctp-panel__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
 }
 
 @media (max-width: 700px) {
