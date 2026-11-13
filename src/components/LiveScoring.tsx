@@ -22,14 +22,19 @@ import {
   getsStroke,
   netScore,
   patchClosestToPin,
+  patchRoundSettings,
   patchRoundScores,
   patchTeamAssignments,
   playerIds,
+  scorecardForRound,
   sumDefined,
   toPar,
   type ClosestToPinScores,
+  type RoundHandicaps,
+  type RoundHandicapsById,
   type HoleScore,
   type RoundScores,
+  type TeeSelections,
 } from '../scoring'
 
 const POLL_MS = 2000
@@ -49,14 +54,21 @@ export function LiveScoring({ rounds, teamAssignments, onTeamAssignmentsChange }
   const [roundId, setRoundId] = useState(roundOptions[0]?.id ?? 'trails')
   const [scores, setScores] = useState<RoundScores>({})
   const [closestToPin, setClosestToPin] = useState<ClosestToPinScores>({})
+  const [teeSelections, setTeeSelections] = useState<TeeSelections>({})
+  const [handicapsByRound, setHandicapsByRound] = useState<RoundHandicapsById>({})
+  const [handicapDrafts, setHandicapDrafts] = useState<Record<string, string>>({})
   const [mode, setMode] = useState<'gross' | 'net'>('net')
   const [status, setStatus] = useState<'connecting' | 'live' | 'error'>('connecting')
   const [updatedAt, setUpdatedAt] = useState<string | null>(null)
   const [teamsBusy, setTeamsBusy] = useState(false)
   const saving = useRef(false)
+  const settingsSaving = useRef(false)
   const teamsSaving = useRef(false)
-  const card = scorecardsByRoundId[roundId]
+  const baseCard = scorecardsByRoundId[roundId]
+  const card = scorecardForRound(roundId, teeSelections[roundId])
   const activeRound = rounds.find((round) => round.id === roundId)
+  const roundHandicaps: RoundHandicaps = handicapsByRound[roundId] ?? {}
+  const handicapForPlayer = (id: PlayerId) => roundHandicaps[id] ?? players.find((player) => player.id === id)!.handicap
 
   const refresh = useCallback(async () => {
     try {
@@ -65,6 +77,10 @@ export function LiveScoring({ rounds, teamAssignments, onTeamAssignmentsChange }
         setScores(store.scores ?? {})
         setClosestToPin(store.closestToPin ?? {})
         setUpdatedAt(store.updatedAt)
+      }
+      if (!settingsSaving.current) {
+        setTeeSelections(store.tees ?? {})
+        setHandicapsByRound(store.handicaps ?? {})
       }
       if (!teamsSaving.current && store.teamAssignments && !sameTeamAssignments(store.teamAssignments, teamAssignments)) {
         onTeamAssignmentsChange(store.teamAssignments)
@@ -86,8 +102,8 @@ export function LiveScoring({ rounds, teamAssignments, onTeamAssignmentsChange }
 
   const roundScores = useMemo(() => card ? scores[roundId] ?? emptyScoresForCard(card) : null, [scores, roundId, card])
   const roundCtp = useMemo(() => card ? closestToPin[roundId] ?? emptyClosestToPinForCard(card) : [], [closestToPin, roundId, card])
-  const standings = useMemo(() => calculateTripStandings(scores, closestToPin, rounds), [scores, closestToPin, rounds])
-  const roundResult = useMemo(() => activeRound ? calculateRoundResult(activeRound, scores) : null, [activeRound, scores])
+  const standings = useMemo(() => calculateTripStandings(scores, closestToPin, rounds, teeSelections, handicapsByRound), [scores, closestToPin, rounds, teeSelections, handicapsByRound])
+  const roundResult = useMemo(() => activeRound ? calculateRoundResult(activeRound, scores, teeSelections, handicapsByRound) : null, [activeRound, scores, teeSelections, handicapsByRound])
 
   async function persistRound(nextRound: Record<PlayerId, HoleScore[]>) {
     saving.current = true
@@ -120,6 +136,23 @@ export function LiveScoring({ rounds, teamAssignments, onTeamAssignmentsChange }
       setStatus('error')
     } finally {
       window.setTimeout(() => { saving.current = false }, 400)
+    }
+  }
+
+  async function persistRoundSettings(next: { teeId?: string; handicaps?: RoundHandicaps }) {
+    settingsSaving.current = true
+    if (next.teeId !== undefined) setTeeSelections((current) => ({ ...current, [roundId]: next.teeId! }))
+    if (next.handicaps !== undefined) setHandicapsByRound((current) => ({ ...current, [roundId]: next.handicaps! }))
+    try {
+      const store = await patchRoundSettings(roundId, next)
+      setTeeSelections(store.tees ?? {})
+      setHandicapsByRound(store.handicaps ?? {})
+      setUpdatedAt(store.updatedAt)
+      setStatus('live')
+    } catch {
+      setStatus('error')
+    } finally {
+      settingsSaving.current = false
     }
   }
 
@@ -194,7 +227,7 @@ export function LiveScoring({ rounds, teamAssignments, onTeamAssignmentsChange }
           <SideGame title="Best net round" prize="2 pts" rows={ids.map((id) => [playerName(id), displayScore(standings.byPlayer[id].bestNetRound)])} />
           <SideGame title="Gross birdies" prize="2 pts" rows={ids.map((id) => [playerName(id), standings.byPlayer[id].grossBirdies])} />
           <SideGame title="Eagles" prize="5 each" rows={ids.map((id) => [playerName(id), standings.byPlayer[id].eagles])} />
-          <SideGame title="Hole in one" prize="10 + 5 on Shorty’s" rows={ids.map((id) => [playerName(id), standings.byPlayer[id].holesInOne])} />
+          <SideGame title="Hole in one" prize="10 full · 5 short" rows={ids.map((id) => [playerName(id), standings.byPlayer[id].holesInOne])} />
           <SideGame title="Closest to the pin" prize="1 pt" rows={ids.map((id) => [playerName(id), standings.byPlayer[id].closestToPin])} />
         </div>
         <p className="sidegames__note">Stableford: net bogey 1 · par 2 · birdie 3 · eagle 4; double bogey or worse 0. Net round is measured to par and counts once a player completes a card. Tied side-game prizes split evenly.</p>
@@ -237,8 +270,53 @@ export function LiveScoring({ rounds, teamAssignments, onTeamAssignmentsChange }
         {card.name} · {card.tee} tees · Par {card.par} · {card.holes} holes{card.rating != null ? ` · ${card.rating}/${card.slope}` : ''}
       </p>
       <p className="scoring__hint">
-        Enter gross scores. Net totals use each player’s GHIN index, course rating, slope, and hole stroke index.
+        Enter the tees and GHIN indexes for this round. Net scoring updates from course rating, slope, and each hole’s stroke index.
       </p>
+
+      <div className="round-settings">
+        <label className="scoring__field">
+          <span>Tee for this round</span>
+          <select
+            value={teeSelections[roundId] ?? baseCard?.teeOptions.find((tee) => tee.name === baseCard.tee)?.id ?? ''}
+            onChange={(event) => void persistRoundSettings({ teeId: event.target.value })}
+          >
+            {baseCard?.teeOptions.map((tee) => <option key={tee.id} value={tee.id}>{tee.name} · {tee.rating}/{tee.slope}</option>)}
+          </select>
+        </label>
+        <div className="round-settings__handicaps">
+          {players.map((player) => (
+            <label key={player.id} className="scoring__field">
+              <span>{player.name} · GHIN</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                min="-10"
+                max="54"
+                step="0.1"
+                value={handicapDrafts[`${roundId}:${player.id}`] ?? String(handicapForPlayer(player.id))}
+                onChange={(event) => {
+                  setHandicapDrafts((current) => ({ ...current, [`${roundId}:${player.id}`]: event.target.value }))
+                }}
+                onBlur={() => {
+                  const key = `${roundId}:${player.id}`
+                  const draft = handicapDrafts[key]
+                  if (draft !== undefined) {
+                    const value = Number(draft)
+                    if (draft.trim() && Number.isFinite(value)) {
+                      void persistRoundSettings({ handicaps: { ...roundHandicaps, [player.id]: value } })
+                    }
+                    setHandicapDrafts((current) => {
+                      const next = { ...current }
+                      delete next[key]
+                      return next
+                    })
+                  }
+                }}
+              />
+            </label>
+          ))}
+        </div>
+      </div>
 
       <div className="scoring__table-wrap">
         <table className="scoring__table">
@@ -264,7 +342,8 @@ export function LiveScoring({ rounds, teamAssignments, onTeamAssignmentsChange }
             {ids.map((id) => {
               const row = roundScores[id]
               const grossTotal = sumDefined(row)
-              const netValues = card.holesDetail.map((hole, index) => netScore(id, hole, row[index], card))
+              const playerHandicap = handicapForPlayer(id)
+              const netValues = card.holesDetail.map((hole, index) => netScore(id, hole, row[index], card, playerHandicap))
               const netTotal = sumDefined(netValues)
               const displayTotal = mode === 'net' ? netTotal : grossTotal
               const displayToPar = toPar(displayTotal, card.holesDetail, mode === 'net' ? netValues : row)
@@ -272,14 +351,14 @@ export function LiveScoring({ rounds, teamAssignments, onTeamAssignmentsChange }
                 <tr key={id}>
                   <th scope="row">
                     <span className="scoring__player">{playerName(id)}</span>
-                    <span className="scoring__strokes">GHIN {players.find((player) => player.id === id)?.handicap.toFixed(1)} · CH {courseHandicap(id, card)}</span>
+                    <span className="scoring__strokes">GHIN {playerHandicap.toFixed(1)} · CH {courseHandicap(id, card, playerHandicap)}</span>
                   </th>
                   {card.holesDetail.map((hole, index) => (
                     <td key={hole.number} className="scoring__cell">
                       <label className="scoring__input-wrap">
                         <span className="visually-hidden">{playerName(id)} hole {hole.number}</span>
                         <input inputMode="numeric" pattern="[0-9]*" maxLength={2} value={row[index] ?? ''} onChange={(event) => setHoleScore(id, index, event.target.value)} />
-                        {getsStroke(id, hole, card) ? <span className="scoring__dot" title="Course-handicap stroke" /> : null}
+                        {getsStroke(id, hole, card, playerHandicap) ? <span className="scoring__dot" title="Course-handicap stroke" /> : null}
                         {mode === 'net' && row[index] != null ? <span className="scoring__net-mini">{netValues[index]}</span> : null}
                       </label>
                     </td>

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   pairLabel,
   playerName,
@@ -13,17 +13,29 @@ import {
   type RoundGame,
 } from './data/trip'
 import { LiveScoring } from './components/LiveScoring'
+import { fetchScores } from './scoring'
 import './App.css'
 
 const HERO_IMAGE = '/bandon-dunes-hero.jpg'
 
 function App() {
+  const path = window.location.pathname.replace(/\/+$/, '') || '/'
+  return path === '/score' ? <ScorePage /> : <TripInfoPage />
+}
+
+function TripInfoPage() {
   const [teamAssignments, setTeamAssignments] = useState<TeamAssignments>(defaultTeamAssignments)
   const updateTeamAssignments = useCallback((next: TeamAssignments) => {
     setTeamAssignments((current) => sameTeamAssignments(current, next) ? current : next)
   }, [])
   const schedule = useMemo(() => createSchedule(teamAssignments), [teamAssignments])
   const days = roundsByDay(schedule)
+
+  useEffect(() => {
+    void fetchScores().then((store) => {
+      if (store.teamAssignments) updateTeamAssignments(store.teamAssignments)
+    }).catch(() => undefined)
+  }, [updateTeamAssignments])
 
   return (
     <div className="page">
@@ -40,7 +52,7 @@ function App() {
           <a href="#schedule">Schedule</a>
           <a href="#points">Points</a>
           <a href="#games">Games</a>
-          <a href="#scoring">Score</a>
+          <a href="/score">Leaderboard & score</a>
         </nav>
         <div className="hero__copy">
           <p className="brand">Bandon</p>
@@ -50,8 +62,8 @@ function App() {
             Stableford, and shared live scoring.
           </p>
           <div className="hero__ctas">
-            <a className="btn btn--solid" href="#scoring">
-              Live scoring
+            <a className="btn btn--solid" href="/score">
+              Leaderboard & score
             </a>
             <a className="btn btn--ghost" href="#schedule">
               Schedule
@@ -153,21 +165,6 @@ function App() {
           </div>
         </section>
 
-        <section id="scoring" className="section">
-          <div className="section__head">
-            <p className="eyebrow">Live card</p>
-            <h2>Scorekeeping</h2>
-            <p className="section__lede">
-              Full scorecards for every course. Gross scores sync for everyone — course
-              handicaps, round points, Stableford, and the trip board recalculate live.
-            </p>
-          </div>
-          <LiveScoring
-            rounds={schedule}
-            teamAssignments={teamAssignments}
-            onTeamAssignmentsChange={updateTeamAssignments}
-          />
-        </section>
       </main>
 
       <footer className="footer">
@@ -176,6 +173,49 @@ function App() {
           Team slots, match pairings, and GHIN indexes update from the live scoring card.
         </p>
       </footer>
+    </div>
+  )
+}
+
+function ScorePage() {
+  const [teamAssignments, setTeamAssignments] = useState<TeamAssignments>(defaultTeamAssignments)
+  const updateTeamAssignments = useCallback((next: TeamAssignments) => {
+    setTeamAssignments((current) => sameTeamAssignments(current, next) ? current : next)
+  }, [])
+  const rounds = useMemo(() => createSchedule(teamAssignments), [teamAssignments])
+
+  return (
+    <div className="page score-page">
+      <header className="hero hero--compact">
+        <div className="hero__media" aria-hidden="true">
+          <img src={HERO_IMAGE} alt="Bandon Dunes Golf Resort coastline" className="hero__img" />
+          <div className="hero__scrim" />
+        </div>
+        <nav className="nav">
+          <a href="/">Trip information</a>
+          <a href="#leaderboard">Leaderboard</a>
+          <a href="#scorecard">Scorecards</a>
+        </nav>
+        <div className="hero__copy">
+          <p className="brand">Bandon · Live</p>
+          <h1>Leaderboard & scorekeeping</h1>
+          <p className="hero__lede">Shared gross scores. Live net matches, Stableford, and trip points.</p>
+          <div className="hero__ctas"><a className="btn btn--ghost" href="/">Trip information</a></div>
+        </div>
+      </header>
+      <main>
+        <section id="leaderboard" className="section">
+          <div className="section__head">
+            <p className="eyebrow">Shared live card</p>
+            <h2>Leaderboard</h2>
+            <p className="section__lede">Scores, tees, GHIN indexes, closest-to-pin picks, and team draws update for everyone.</p>
+          </div>
+          <div id="scorecard">
+            <LiveScoring rounds={rounds} teamAssignments={teamAssignments} onTeamAssignmentsChange={updateTeamAssignments} />
+          </div>
+        </section>
+      </main>
+      <footer className="footer"><p>Bandon Dunes Golf Resort · November 2026</p><a href="/">Back to trip information</a></footer>
     </div>
   )
 }

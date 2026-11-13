@@ -73,7 +73,7 @@ export const tripRace = {
   rules: [
     { title: 'Net Stableford', detail: 'Add net Stableford points over every round. Trip places earn 5 / 2 / 1 points.' },
     { title: 'Net round + birdies', detail: 'Best completed net-to-par round earns 2. Most gross birdies earns 2.' },
-    { title: 'Big shots', detail: 'Each eagle earns 5 points. A hole-in-one earns 10; a Shorty’s ace earns 5 extra.' },
+    { title: 'Big shots', detail: 'Each eagle earns 5 points. A full-course ace earns 10; an ace at Preserve or Shorty’s earns 5 instead.' },
     { title: 'Closest to the pin', detail: 'Mark the winner on each par 3 at Preserve and Shorty’s. Most across both earns 1 point.' },
   ],
 }

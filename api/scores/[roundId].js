@@ -39,12 +39,16 @@ export default async function handler(req, res) {
     const body = await readBody(req)
     const hasScores = body?.roundScores && typeof body.roundScores === 'object'
     const hasCtp = Array.isArray(body?.closestToPin)
-    if (!hasScores && !hasCtp) {
-      send(res, 400, { error: 'roundScores or closestToPin required' })
+    const hasSettings = typeof body?.teeId === 'string' || (body?.handicaps && typeof body.handicaps === 'object')
+    if (!hasScores && !hasCtp && !hasSettings) {
+      send(res, 400, { error: 'roundScores, closestToPin, teeId, or handicaps required' })
       return
     }
 
-    const store = await patchRound(roundId, body.roundScores, body.closestToPin)
+    const store = await patchRound(roundId, body.roundScores, body.closestToPin, {
+      teeId: body.teeId,
+      handicaps: body.handicaps,
+    })
     send(res, 200, { ...store, storage: storageMode() })
   } catch (err) {
     console.error(err)

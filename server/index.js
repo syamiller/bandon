@@ -63,11 +63,15 @@ app.patch('/api/scores/:roundId', async (req, res) => {
   try {
     const hasScores = req.body?.roundScores && typeof req.body.roundScores === 'object'
     const hasCtp = Array.isArray(req.body?.closestToPin)
-    if (!hasScores && !hasCtp) {
-      res.status(400).json({ error: 'roundScores or closestToPin required' })
+    const hasSettings = typeof req.body?.teeId === 'string' || (req.body?.handicaps && typeof req.body.handicaps === 'object')
+    if (!hasScores && !hasCtp && !hasSettings) {
+      res.status(400).json({ error: 'roundScores, closestToPin, teeId, or handicaps required' })
       return
     }
-    const store = await patchRound(req.params.roundId, req.body.roundScores, req.body.closestToPin)
+    const store = await patchRound(req.params.roundId, req.body.roundScores, req.body.closestToPin, {
+      teeId: req.body.teeId,
+      handicaps: req.body.handicaps,
+    })
     res.json({ ...store, storage: storageMode() })
   } catch (err) {
     res.status(500).json({ error: err?.message || 'Server error' })
