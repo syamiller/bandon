@@ -94,3 +94,5 @@ Hole pars, stroke indexes, and yardages: [`src/data/scorecards.ts`](src/data/sco
 | Nov 17, 7:30 am | Pacific Dunes | Nassau best-ball stroke play |
 | Nov 17, 1:00 pm | Old Macdonald | Two 9-hole sets of 1v1 matches |
 | Nov 18, 8:30 am | Sheep Ranch | St. James Roll · final round |
+
+St. James dots use **net** scores. Each player earns one dot for every opponent beaten outright on a hole. Tied players earn no dots against each other; those points vanish (for example, net 4–4–5–6 scores 2–2–1–0).

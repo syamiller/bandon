@@ -164,7 +164,7 @@ export function createSchedule(assignments: TeamAssignments): Round[] {
       case 'old-mac':
         return { ...definition, game: { kind: 'singles', formatId: 'old-mac-singles', label: 'Two 9-Hole Matchball Rounds', blurb: 'Two singles matches per nine. Each match is worth 2 team points, split between partners.', teams: assignments.day3, matches: [...oldMacMatchups[0], ...oldMacMatchups[1]].map((pair, i) => ({ label: `${i < 2 ? 'Front' : 'Back'} 9 · Match ${(i % 2) + 1}`, start: i < 2 ? 0 : 9, end: i < 2 ? 9 : 18, pair })) } }
       case 'sheep':
-        return { ...definition, game: { kind: 'st-james', formatId: 'sheep-st-james', label: 'St. James Roll · 6 Dots per Hole', blurb: 'Net hole scores: earn one dot for each golfer you beat. Trip finish awards 5 / 2 / 1 (8 points total).' } }
+        return { ...definition, game: { kind: 'st-james', formatId: 'sheep-st-james', label: 'St. James Roll · 6 Dots per Hole', blurb: 'Compare net scores. Earn 1 dot for each opponent beaten outright; tied players do not score against each other, and those dots vanish. Trip finish awards 5 / 2 / 1.' } }
       case 'pacific':
         return { ...definition, game: { kind: 'best-ball', formatId: 'pacific-nassau', label: 'Nassau Best Ball · Stroke Play', blurb: 'Low net best ball by total strokes: 2 front, 2 back, 4 overall.', play: 'stroke', teams: assignments.day3 } }
       default:

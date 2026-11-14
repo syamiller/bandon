@@ -278,7 +278,7 @@ function GameDetail({ game }: { game: RoundGame }) {
   }
   return (
     <div className="game__wolf">
-      <p className="game__side-label">Individual net scoring · 6 dots available per hole</p>
+      <p className="game__side-label">Net scoring · 6 dots available per hole · ties earn no dots against tied players</p>
       <p className="game__pair">{game.blurb}</p>
     </div>
   )
