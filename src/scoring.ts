@@ -1,7 +1,7 @@
 import { scorecardsByRoundId, type Hole, type Scorecard } from './data/scorecards'
 import {
   players,
-  strokesOffLow,
+  type TeamAssignments,
   type PlayerId,
 } from './data/trip'
 
@@ -9,10 +9,19 @@ export type HoleScore = number | null
 
 /** roundId → playerId → hole index (0-based) → gross strokes */
 export type RoundScores = Record<string, Record<PlayerId, HoleScore[]>>
+export type ClosestToPinScores = Record<string, (PlayerId | null)[]>
+export type RoundHandicaps = Partial<Record<PlayerId, number>>
+export type RoundHandicapsById = Record<string, RoundHandicaps>
+export type TeeSelections = Record<string, string>
 
 export type ScoresStore = {
   scores: RoundScores
+  closestToPin?: ClosestToPinScores
+  teamAssignments?: TeamAssignments | null
+  tees?: TeeSelections
+  handicaps?: RoundHandicapsById
   updatedAt: string | null
+  storage?: 'file' | 'upstash'
 }
 
 export function emptyScoresForCard(card: Scorecard): Record<PlayerId, HoleScore[]> {
@@ -23,6 +32,10 @@ export function emptyScoresForCard(card: Scorecard): Record<PlayerId, HoleScore[
     emory: blank(),
     sammy: blank(),
   }
+}
+
+export function emptyClosestToPinForCard(card: Scorecard): (PlayerId | null)[] {
+  return Array.from({ length: card.holes }, () => null)
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -57,19 +70,79 @@ export function patchRoundScores(
   })
 }
 
-/** True if this player gets a stroke on this hole (SI ≤ strokes received). */
-export function getsStroke(playerId: PlayerId, hole: Hole): boolean {
-  const strokes = strokesOffLow(playerId)
-  return strokes > 0 && hole.strokeIndex <= strokes
+export function patchClosestToPin(roundId: string, closestToPin: (PlayerId | null)[]) {
+  return api<ScoresStore>(`/api/scores/${encodeURIComponent(roundId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ closestToPin }),
+  })
+}
+
+export function patchTeamAssignments(teamAssignments: TeamAssignments): Promise<ScoresStore> {
+  return api<ScoresStore>('/api/scores', {
+    method: 'PATCH',
+    body: JSON.stringify({ teamAssignments }),
+  })
+}
+
+export function patchRoundSettings(
+  roundId: string,
+  settings: { teeId?: string; handicaps?: RoundHandicaps },
+): Promise<ScoresStore> {
+  return api<ScoresStore>(`/api/scores/${encodeURIComponent(roundId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(settings),
+  })
+}
+
+export function scorecardForRound(roundId: string, teeId?: string): Scorecard | undefined {
+  const card = scorecardsByRoundId[roundId]
+  if (!card) return undefined
+  const tee = card.teeOptions.find((option) => option.id === teeId) ?? card.teeOptions.find((option) => option.name === card.tee)
+  if (!tee) return card
+  return {
+    ...card,
+    tee: tee.name,
+    rating: tee.rating,
+    slope: tee.slope,
+    ratingPar: tee.ratingPar,
+    ratingHoles: tee.ratingHoles ?? 18,
+  }
+}
+
+export function courseHandicap(playerId: PlayerId, card: Scorecard, handicapOverride?: number): number {
+  const player = players.find((entry) => entry.id === playerId)
+  const { rating, slope, ratingPar, ratingHoles = 18 } = card
+  const index = handicapOverride ?? player?.handicap ?? 0
+  if (rating == null || slope == null || ratingPar == null) return index
+  const fullCourse = (index * slope) / 113 + rating - ratingPar
+  return Math.round((fullCourse * card.holes) / ratingHoles)
+}
+
+export function strokesReceived(playerId: PlayerId, hole: Hole, card: Scorecard, handicapOverride?: number): number {
+  const handicap = courseHandicap(playerId, card, handicapOverride)
+  if (handicap < 0) {
+    const giveBack = Math.abs(handicap)
+    return -Math.floor(giveBack / card.holes) -
+      (giveBack % card.holes > 0 && hole.strokeIndex > card.holes - (giveBack % card.holes) ? 1 : 0)
+  }
+  return Math.floor(handicap / card.holes) +
+    (hole.strokeIndex <= handicap % card.holes ? 1 : 0)
+}
+
+/** True if this player gets a GHIN-adjusted course-handicap stroke on this hole. */
+export function getsStroke(playerId: PlayerId, hole: Hole, card: Scorecard, handicapOverride?: number): boolean {
+  return strokesReceived(playerId, hole, card, handicapOverride) > 0
 }
 
 export function netScore(
   playerId: PlayerId,
   hole: Hole,
   gross: number | null,
+  card: Scorecard,
+  handicapOverride?: number,
 ): number | null {
   if (gross == null || !Number.isFinite(gross)) return null
-  return gross - (getsStroke(playerId, hole) ? 1 : 0)
+  return gross - strokesReceived(playerId, hole, card, handicapOverride)
 }
 
 export function sumDefined(vals: (number | null)[]): number | null {

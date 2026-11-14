@@ -12,6 +12,15 @@ export type Hole = {
   yards: number
 }
 
+export type TeeOption = {
+  id: string
+  name: string
+  rating: number
+  slope: number
+  ratingPar: number
+  ratingHoles?: number
+}
+
 export type Scorecard = {
   id: string
   name: string
@@ -20,12 +29,16 @@ export type Scorecard = {
   tee: string
   rating?: number
   slope?: number
+  /** Course-rating par and rated hole count for GHIN course-handicap conversion. */
+  ratingPar?: number
+  ratingHoles?: number
+  teeOptions: TeeOption[]
   source: string
   holesDetail: Hole[]
 }
 
 function card(
-  meta: Omit<Scorecard, 'holesDetail' | 'holes' | 'par'>,
+  meta: Omit<Scorecard, 'holesDetail' | 'holes' | 'par' | 'teeOptions'> & { teeOptions?: TeeOption[] },
   rows: [number, number, number][], // par, SI, yards
 ): Scorecard {
   const holesDetail = rows.map(([par, strokeIndex, yards], i) => ({
@@ -36,6 +49,14 @@ function card(
   }))
   return {
     ...meta,
+    teeOptions: meta.teeOptions ?? (meta.rating != null && meta.slope != null ? [{
+      id: meta.tee.toLowerCase().replaceAll(' ', '-'),
+      name: meta.tee,
+      rating: meta.rating,
+      slope: meta.slope,
+      ratingPar: meta.ratingPar ?? holesDetail.reduce((total, hole) => total + hole.par, 0),
+      ratingHoles: meta.ratingHoles ?? holesDetail.length,
+    }] : []),
     holes: holesDetail.length,
     par: holesDetail.reduce((s, h) => s + h.par, 0),
     holesDetail,
@@ -48,8 +69,17 @@ export const trails = card(
     id: 'trails',
     name: 'Bandon Trails',
     tee: 'Green',
-    rating: 72.0,
-    slope: 137,
+    rating: 71.1,
+    slope: 129,
+    ratingPar: 71,
+    ratingHoles: 18,
+    teeOptions: [
+      { id: 'black', name: 'Black', rating: 73.6, slope: 130, ratingPar: 71 },
+      { id: 'green', name: 'Green', rating: 71.1, slope: 129, ratingPar: 71 },
+      { id: 'gold', name: 'Gold', rating: 68.7, slope: 122, ratingPar: 71 },
+      { id: 'orange', name: 'Orange', rating: 66.1, slope: 117, ratingPar: 71 },
+      { id: 'royal-blue', name: 'Royal Blue', rating: 61.2, slope: 105, ratingPar: 71 },
+    ],
     source: 'GolfPass / Bandon Trails scorecard',
   },
   [
@@ -84,6 +114,14 @@ export const preserve = card(
     id: 'preserve',
     name: 'Bandon Preserve',
     tee: 'Back',
+    rating: 53.1,
+    slope: 105,
+    ratingPar: 54,
+    ratingHoles: 18,
+    teeOptions: [
+      { id: 'back', name: 'Back', rating: 53.1, slope: 105, ratingPar: 54, ratingHoles: 18 },
+      { id: 'front', name: 'Front', rating: 53.0, slope: 103, ratingPar: 54, ratingHoles: 18 },
+    ],
     source: 'Bandon Dunes Golf Resort + GolfPass (13-hole card)',
   },
   [
@@ -114,6 +152,13 @@ export const shortys = card(
     tee: 'Back',
     rating: 56.2,
     slope: 87,
+    ratingPar: 54,
+    ratingHoles: 18,
+    teeOptions: [
+      { id: 'back', name: 'Back', rating: 56.2, slope: 87, ratingPar: 54, ratingHoles: 18 },
+      { id: 'middle', name: 'Middle', rating: 52.1, slope: 85, ratingPar: 54, ratingHoles: 18 },
+      { id: 'front', name: 'Front', rating: 54.0, slope: 88, ratingPar: 54, ratingHoles: 18 },
+    ],
     source: "GolfPass Shorty's card + hole 19 from course reviews",
   },
   [
@@ -145,8 +190,18 @@ export const dunes = card(
     id: 'dunes',
     name: 'Bandon Dunes',
     tee: 'Green',
-    rating: 72.2,
-    slope: 130,
+    rating: 71.4,
+    slope: 133,
+    ratingPar: 72,
+    ratingHoles: 18,
+    teeOptions: [
+      { id: 'tournament', name: 'Tournament', rating: 75.9, slope: 145, ratingPar: 72 },
+      { id: 'black', name: 'Black', rating: 73.5, slope: 143, ratingPar: 72 },
+      { id: 'green', name: 'Green', rating: 71.4, slope: 133, ratingPar: 72 },
+      { id: 'gold', name: 'Gold', rating: 69.1, slope: 124, ratingPar: 72 },
+      { id: 'orange', name: 'Orange', rating: 65.5, slope: 114, ratingPar: 72 },
+      { id: 'royal-blue', name: 'Royal Blue', rating: 61.6, slope: 105, ratingPar: 72 },
+    ],
     source: 'GolfPass / Bandon Dunes scorecard',
   },
   [
@@ -177,8 +232,17 @@ export const pacific = card(
     id: 'pacific',
     name: 'Pacific Dunes',
     tee: 'Green',
-    rating: 70.5,
-    slope: 128,
+    rating: 70.8,
+    slope: 135,
+    ratingPar: 71,
+    ratingHoles: 18,
+    teeOptions: [
+      { id: 'black', name: 'Black', rating: 73.2, slope: 143, ratingPar: 71 },
+      { id: 'green', name: 'Green', rating: 70.8, slope: 135, ratingPar: 71 },
+      { id: 'gold', name: 'Gold', rating: 68.9, slope: 131, ratingPar: 71 },
+      { id: 'orange', name: 'Orange', rating: 65.8, slope: 126, ratingPar: 71 },
+      { id: 'royal-blue', name: 'Royal Blue', rating: 61.5, slope: 113, ratingPar: 71 },
+    ],
     source: 'GolfPass / Pacific Dunes scorecard',
   },
   [
@@ -209,8 +273,17 @@ export const oldMac = card(
     id: 'old-mac',
     name: 'Old McDonald',
     tee: 'Green',
-    rating: 71.3,
-    slope: 126,
+    rating: 71.4,
+    slope: 127,
+    ratingPar: 71,
+    ratingHoles: 18,
+    teeOptions: [
+      { id: 'black', name: 'Black', rating: 74.4, slope: 134, ratingPar: 71 },
+      { id: 'green', name: 'Green', rating: 71.4, slope: 127, ratingPar: 71 },
+      { id: 'gold', name: 'Gold', rating: 67.8, slope: 117, ratingPar: 71 },
+      { id: 'orange', name: 'Orange', rating: 65.1, slope: 112, ratingPar: 71 },
+      { id: 'royal-blue', name: 'Royal Blue', rating: 62.6, slope: 104, ratingPar: 71 },
+    ],
     source: 'GolfPass / Old Macdonald scorecard',
   },
   [
@@ -241,8 +314,17 @@ export const sheep = card(
     id: 'sheep',
     name: 'Sheep Ranch',
     tee: 'Green',
-    rating: 70.8,
-    slope: 121,
+    rating: 70.2,
+    slope: 119,
+    ratingPar: 72,
+    ratingHoles: 18,
+    teeOptions: [
+      { id: 'black', name: 'Black', rating: 72.1, slope: 122, ratingPar: 72 },
+      { id: 'green', name: 'Green', rating: 70.2, slope: 119, ratingPar: 72 },
+      { id: 'gold', name: 'Gold', rating: 68.1, slope: 111, ratingPar: 72 },
+      { id: 'orange', name: 'Orange', rating: 65.2, slope: 105, ratingPar: 72 },
+      { id: 'royal-blue', name: 'Royal Blue', rating: 61.0, slope: 96, ratingPar: 72 },
+    ],
     source: 'GolfPass / Sheep Ranch scorecard',
   },
   [

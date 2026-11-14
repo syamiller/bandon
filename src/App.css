@@ -13,6 +13,10 @@
   isolation: isolate;
 }
 
+.hero--compact {
+  min-height: min(62svh, 38rem);
+}
+
 .hero__media {
   position: absolute;
   inset: 0;
@@ -46,6 +50,7 @@
 
 .nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 1.75rem;
   justify-content: flex-end;
   padding: 1.5rem 1.75rem 0;
@@ -206,6 +211,13 @@
   letter-spacing: 0.04em;
   color: var(--muted);
   margin-top: 0.15rem;
+}
+
+.players__slot {
+  font-family: var(--font-body);
+  color: var(--muted);
+  font-size: 0.72em;
+  font-weight: 500;
 }
 
 /* —— Schedule —— */
@@ -402,6 +414,8 @@
 }
 
 .game {
+  min-width: 0;
+  max-width: 100%;
   padding: 1.5rem 0 1.75rem;
   border-top: 1px solid var(--line);
   scroll-margin-top: 1.5rem;
@@ -413,11 +427,15 @@
 }
 
 .game__head {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   justify-content: space-between;
   gap: 0.75rem 1.5rem;
   margin-bottom: 0.65rem;
+}
+
+.game__head > div {
+  min-width: 0;
 }
 
 .game__when {
@@ -433,6 +451,8 @@
 
 .game__badge {
   align-self: flex-start;
+  width: fit-content;
+  max-width: 100%;
   font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -441,6 +461,23 @@
   background: color-mix(in srgb, var(--sand) 35%, transparent);
   padding: 0.4rem 0.7rem;
   border-radius: 0.25rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+@media (min-width: 700px) {
+  .game__head {
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    align-items: start;
+  }
+
+  .game__badge {
+    justify-self: end;
+    text-align: center;
+    min-width: 0;
+    max-width: 16rem;
+  }
 }
 
 .game__blurb {
@@ -464,6 +501,7 @@
 }
 
 .game__side {
+  min-width: 0;
   padding: 1rem 1.1rem;
   background: color-mix(in srgb, var(--sky) 12%, var(--foam));
   border: 1px solid color-mix(in srgb, var(--sky) 25%, transparent);
@@ -482,6 +520,8 @@
   font-family: var(--font-display);
   font-size: 1.2rem;
   color: var(--dune-deep);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .game__vs {
@@ -539,8 +579,69 @@
 }
 
 .game__sixes {
+  min-width: 0;
   display: grid;
   gap: 1rem;
+}
+
+.game__sixes > ul {
+  min-width: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.game__sixes > ul li {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 8.5rem) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.4rem 0.7rem;
+  padding: 0.65rem 0;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 420px) {
+  .game__sixes > ul li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.2rem;
+  }
+
+  .game__badge {
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .nav {
+    justify-content: center;
+    gap: 0.55rem 1rem;
+    padding: 1rem 1rem 0;
+    font-size: 0.85rem;
+  }
+
+  .hero__copy {
+    padding: 2rem 1.25rem 2.5rem;
+  }
+
+  .section {
+    width: min(1120px, calc(100% - 1.5rem));
+  }
+
+  .game__head {
+    gap: 0.65rem;
+  }
+
+  .game__badge {
+    justify-self: start;
+    font-size: 0.7rem;
+  }
+
+  .game__blurb {
+    overflow-wrap: anywhere;
+  }
 }
 
 @media (min-width: 800px) {
@@ -732,6 +833,196 @@
   color: var(--sand-deep);
   font-weight: 600;
   white-space: nowrap;
+}
+
+.sidegames,
+.teams-panel,
+.ctp-panel {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--dune) 5%, var(--foam));
+}
+
+.sidegames > h3,
+.teams-panel h3,
+.ctp-panel h3 {
+  color: var(--dune-deep);
+  font-size: 1.35rem;
+}
+
+.sidegames__grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 700px) {
+  .sidegames__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.sidegame {
+  min-width: 0;
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--foam) 90%, white);
+}
+
+.sidegame__head,
+.teams-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+}
+
+.sidegame__head h4 {
+  color: var(--dune-deep);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
+.sidegame__head span {
+  color: var(--sand-deep);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.sidegame ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.65rem 0 0;
+}
+
+.sidegame li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.sidegame li b {
+  color: var(--dune-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+.sidegames__note,
+.teams-panel__head p {
+  margin-top: 0.65rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.teams-panel__shuffle {
+  border: 1px solid var(--dune);
+  background: var(--dune);
+  color: var(--foam);
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.teams-panel__shuffle:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.teams-panel__grid {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 700px) {
+  .teams-panel__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1000px) {
+  .teams-panel__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.teams-panel__day {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.8rem;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--foam) 90%, white);
+  font-size: 0.82rem;
+}
+
+.teams-panel__day > span,
+.teams-panel__day small {
+  color: var(--muted);
+}
+
+.teams-panel__day b {
+  color: var(--dune-deep);
+  font-weight: 600;
+}
+
+.ctp-panel {
+  margin: 1.75rem 0;
+}
+
+.ctp-panel__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.round-settings {
+  display: grid;
+  gap: 0.9rem;
+  margin: 1rem 0 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--dune) 5%, var(--foam));
+}
+
+.round-settings__handicaps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.round-settings .scoring__field {
+  min-width: 0;
+}
+
+.round-settings .scoring__field input {
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--dune-deep);
+  background: var(--foam);
+  border: 1px solid var(--line);
+  padding: 0.65rem 0.85rem;
+}
+
+@media (min-width: 850px) {
+  .round-settings {
+    grid-template-columns: minmax(15rem, 0.7fr) minmax(0, 2fr);
+    align-items: end;
+  }
+
+  .round-settings__handicaps {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 700px) {
